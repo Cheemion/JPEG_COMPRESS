@@ -1,0 +1,12 @@
+﻿# CMakeList.txt : Top-level CMake project file, do global configuration
+# and include sub-projects here.
+#
+cmake_minimum_required (VERSION 3.8)
+
+project ("JPEG_COMPRESS")
+
+# Include sub-projects.
+add_subdirectory ("JPEG")
+add_subdirectory ("Day1")
+add_subdirectory ("Decoder")
+
