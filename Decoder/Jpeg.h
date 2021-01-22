@@ -1,4 +1,6 @@
 #pragma once
+#include <vector>
+
 typedef unsigned char byte;
 typedef unsigned int uint;
 
@@ -70,6 +72,31 @@ const byte APP13 = 0xED;
 const byte APP14 = 0xEE;
 const byte APP15 = 0xEF;
 
+//Misc Markers
+const byte JPG0 = 0xF0;
+const byte JPG1 = 0xF1;
+const byte JPG2 = 0xF2;
+const byte JPG3 = 0xF3;
+const byte JPG4 = 0xF4;
+const byte JPG5 = 0xF5;
+const byte JPG6 = 0xF6;
+const byte JPG7 = 0xF7;
+const byte JPG8 = 0xF8;
+const byte JPG9 = 0xF9;
+const byte JPG10 = 0xFA;
+const byte JPG11 = 0xFB;
+const byte JPG12 = 0xFC;
+const byte JPG13 = 0xFD;
+const byte COM = 0xFE;
+const byte TEM = 0x01;
+
+struct HuffmanTable
+{
+	byte offsets[17] = { 0 };
+	byte symbols[162] = { 0 };
+	bool set = false;
+};
+
 
 const byte ZIG_ZAG[64] =
 {
@@ -91,11 +118,20 @@ struct ColorComponent {
 	byte horizontalSamplingFactor = 1;
 	byte verticalSamplingFactor = 1;
 	byte quantizationTableID = 0;
+	byte huffmanDCTableID = 0;
+	byte huffmanACTableID = 0;
 	bool used = false;
 };
 
 struct Header
 {	
+	byte startOfSelection = 0;
+	byte endOfSelection = 63;
+	byte successiveApproximationHigh = 0;
+	byte successiveApproximationLow = 0;
+	std::vector<byte> huffmanData;
+	HuffmanTable huffmanDCTables[4];
+	HuffmanTable huffmanACTables[4];
 	bool zeroBased = false;
 	QuantizationTable quantizationTables[4];
 	ColorComponent colorComponent[3];

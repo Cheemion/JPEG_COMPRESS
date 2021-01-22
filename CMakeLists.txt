@@ -6,7 +6,6 @@ cmake_minimum_required (VERSION 3.8)
 project ("JPEG_COMPRESS")
 
 # Include sub-projects.
-add_subdirectory ("JPEG")
 add_subdirectory ("Day1")
 add_subdirectory ("Decoder")
 
