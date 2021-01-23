@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include "Jpeg.h"
+
 void readQuantizationTable(std::ifstream& inFile, Header* const header) {
 	std::cout << "Reading DQT" << std::endl;
 	int length = (inFile.get() << 8) + inFile.get();
@@ -295,7 +296,7 @@ void readStartOfFrame(std::ifstream& inFile, Header* const header) {
 Header* readJPG(const std::string filename) {
 	std::ifstream inFile = std::ifstream(filename, std::ios::in | std::ios::binary);
 	if (!inFile) {
-		std::cout << "Error opeing file" <<std::endl;
+		std::cout << "Error opening file" <<std::endl;
 		return nullptr;
 	}
 
@@ -601,7 +602,9 @@ void printHeader(const Header* const header) {
 
 
 int main() {
-	const std::string filename = "C:\\Users\\kim\\Desktop\\MMPlayer\\MPEG\\JPEG_COMPRESS\\lina.jpg";
+
+	//jpeg file path
+	const std::string filename(EXAMPLE_PATH);
 
 	Header* header = readJPG(filename);
 	if (header == nullptr) {
