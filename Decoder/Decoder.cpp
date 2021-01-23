@@ -11,7 +11,7 @@ void readQuantizationTable(std::ifstream& inFile, Header* const header) {
 		byte tableID = tableInfo & 0x0F;
 		length = length - 1;
 
-		//Ö»ÄÜÊÇ 0 1 2 3 
+		//åªèƒ½æ˜¯ 0 1 2 3 
 		if (tableID > 3) {
 			std::cout << "invaild quantizatio table ID:" << tableID << std::endl;
 			header->valid = false;
@@ -22,7 +22,7 @@ void readQuantizationTable(std::ifstream& inFile, Header* const header) {
 
 		if (tableSize != 0) { //2bytes
 			for (uint i = 0; i < 64; i++) {
-				//ÎÄ¼şÖĞµÄÊı¾İÊÇÒÔzig_zagµÄË³Ğò´æ´¢µÄ£¬ËùÒÔĞèÒªÒÔzig_zagµÄË³Ğò¸³Öµ¡£
+				//æ–‡ä»¶ä¸­çš„æ•°æ®æ˜¯ä»¥zig_zagçš„é¡ºåºå­˜å‚¨çš„ï¼Œæ‰€ä»¥éœ€è¦ä»¥zig_zagçš„é¡ºåºèµ‹å€¼ã€‚
 				header->quantizationTables[tableID].table[ZIG_ZAG[i]] = (inFile.get() << 8) + inFile.get();
 			}
 			length = length - 128;
@@ -68,13 +68,13 @@ void readHuffmanTable(std::ifstream& inFile, Header* const header) {
 			hTable->offsets[i] = allSymbols;
 		}
 		/*
-		AC²»³¬¹ı162ÖÖsymbols
-		number of zero ´Ó 0-15, length of coeeficient 1 - 10
-		plus F0 means 16¸özero , 00 means all left that is zero
+		ACä¸è¶…è¿‡162ç§symbols
+		number of zero ä» 0-15, length of coeeficient 1 - 10
+		plus F0 means 16ä¸ªzero , 00 means all left that is zero
 		
-		DC ²»³¬¹ı12ÖÖ
-		number of zero Ò»Ö±¶¼ÊÇ0
-		length of coefficient ´Ó0 µ½ 11
+		DC ä¸è¶…è¿‡12ç§
+		number of zero ä¸€ç›´éƒ½æ˜¯0
+		length of coefficient ä»0 åˆ° 11
 		*/
 			
 		/*
@@ -107,7 +107,7 @@ void readStartOfScan(std::ifstream& inFile, Header* const header) {
 		return;
 	}
 	uint length = (inFile.get() << 8) + inFile.get();
-	//ºóÃæÅĞ¶ÏÆäËû¶«Î÷µÄÊ±ºòÄÜÓÃ
+	//åé¢åˆ¤æ–­å…¶ä»–ä¸œè¥¿çš„æ—¶å€™èƒ½ç”¨
 	for (uint i = 0; i < header->numComponents; i++) {
 		header->colorComponent[i].used = false;
 	}
@@ -170,7 +170,7 @@ void readComment(std::ifstream& inFile, Header* const header) {
 	std::cout << "Reading COM MAKER\n";
 	//big endian
 	uint length = (inFile.get() << 8) + inFile.get();
-	//¶Á³ö²»ĞèÒªµÄÊı¾İ
+	//è¯»å‡ºä¸éœ€è¦çš„æ•°æ®
 	for (uint i = 0; i < length - 2; i++) {
 		inFile.get();
 	}
@@ -181,7 +181,7 @@ void readAPPN(std::ifstream& inFile, Header* const header) {
 	std::cout << "Reading APPN MAKER\n";
 	//big endian
 	uint length = (inFile.get() << 8) + inFile.get();
-	//¶Á³ö²»ĞèÒªµÄÊı¾İ
+	//è¯»å‡ºä¸éœ€è¦çš„æ•°æ®
 	for (uint i = 0; i < length - 2; i++) {
 		inFile.get();
 	}
@@ -210,7 +210,7 @@ void readStartOfFrame(std::ifstream& inFile, Header* const header) {
 	uint length = (inFile.get() << 8) + inFile.get();
 	byte precision = inFile.get();
 
-	//Ö»Ö§³Ö8Î»µÄÊı¾İ
+	//åªæ”¯æŒ8ä½çš„æ•°æ®
 	if (precision != 8) {
 		std::cout << "invalid precision :" << precision << std::endl;
 		header->valid = false;
@@ -283,7 +283,7 @@ void readStartOfFrame(std::ifstream& inFile, Header* const header) {
 			header->valid = false;
 			return;
 		}
-		//8ÊÇlength2byte ¼ÓÉÏ 1byte sample precision 2bytesµÄ height 2 bytesµÄwidth  1byteµÄcomponents                
+		//8æ˜¯length2byte åŠ ä¸Š 1byte sample precision 2bytesçš„ height 2 bytesçš„width  1byteçš„components                
 		if (length - 8 - (3 * header->numComponents) != 0) {
 			std::cout << "not consistent length";
 			header->valid = false;
@@ -333,13 +333,13 @@ Header* readJPG(const std::string filename) {
 			return header;
 		}
 
-		// ¶ÁÈ¡frameÀàĞÍ Ö»Ö§³Öbaseline
+		// è¯»å–frameç±»å‹ åªæ”¯æŒbaseline
 		if (current == SOF0) {
 			header->frameType = SOF0;
 			readStartOfFrame(inFile, header);
 		}  
 		/*
-			APPnµÄ´¦Àí
+			APPnçš„å¤„ç†
 			An APPn marker may appear anywhere within a JPEG file.
 			By convention, applications that create APPn markers store their name at the start of the marker to prevent conflicts with other applications.
 		*/
@@ -347,7 +347,7 @@ Header* readJPG(const std::string filename) {
 			readAPPN(inFile, header);
 		}
 		/*
-			DQTµÄ´¦Àí
+			DQTçš„å¤„ç†
 			An DQT marker may appear anywhere within a JPEG file.
 			one restriction is if a scan requires a quantization table
 			it must have been defined in a previous DQT marker
@@ -356,7 +356,7 @@ Header* readJPG(const std::string filename) {
 			readQuantizationTable(inFile, header);
 		} 
 		/*
-			DRIµÄ´¦Àí
+			DRIçš„å¤„ç†
 			Define Restart Interval marker specifies the number of MCUs 
 			between restart markers within the compressed data.
 			A DRI marker may appear anywhere in the file to define or redefine the restart interval.
@@ -367,7 +367,7 @@ Header* readJPG(const std::string filename) {
 			readRestartInterval(inFile, header);
 		}
 		/*
-			DHT´¦Àí£¬¹ş·òÂü±í
+			DHTå¤„ç†ï¼Œå“ˆå¤«æ›¼è¡¨
 		*/
 		else if (current == DHT) {
 			readHuffmanTable(inFile, header);
@@ -440,10 +440,10 @@ Header* readJPG(const std::string filename) {
 
 	/*
 		after SOS
-		Ñ¹ËõÊı¾İµÄ´¦Àí
-		FF00´ú±í00
-		FFFF ¶à¸öFFµÄ»°£¬Ö»µ±×öÒ»¸öFF
-		»áÓöµ½RST, DNL, EOI
+		å‹ç¼©æ•°æ®çš„å¤„ç†
+		FF00ä»£è¡¨00
+		FFFF å¤šä¸ªFFçš„è¯ï¼Œåªå½“åšä¸€ä¸ªFF
+		ä¼šé‡åˆ°RST, DNL, EOI
 	*/
 	if (header->valid) {
 		current = inFile.get();
