@@ -12,3 +12,4 @@ _deps
 .vs
 .vscode
 build
+**/build
