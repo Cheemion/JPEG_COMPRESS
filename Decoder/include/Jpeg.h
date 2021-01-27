@@ -123,6 +123,21 @@ struct ColorComponent {
 	bool used = false;
 };
 
+struct MCU {
+	union {
+		int y[64] = { 0 };
+		int r[64];
+	};
+	union {
+		int cb[64] = { 0 };
+		int g[64];
+	};	
+	union {
+		int cr[64] = { 0 };
+		int b[64];
+	};
+};
+
 struct Header
 {	
 	byte startOfSelection = 0;

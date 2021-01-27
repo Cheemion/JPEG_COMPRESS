@@ -1,7 +1,9 @@
 #include <iostream>
 #include <fstream>
 #include "Jpeg.h"
+MCU* blackBox(const Header* const header) {
 
+}
 void readQuantizationTable(std::ifstream& inFile, Header* const header) {
 	std::cout << "Reading DQT" << std::endl;
 	int length = (inFile.get() << 8) + inFile.get();
@@ -600,6 +602,80 @@ void printHeader(const Header* const header) {
 	std::cout << "Length of Huffman Data:" << header->huffmanData.size() << "\n";
 }
 
+//write a 4-byte integer in little-endian
+void putInt(std::ofstream& outFile, const uint v) {
+	outFile.put((v >> 0) & 0xFF);
+	outFile.put((v >> 8) & 0xFF);
+	outFile.put((v >> 16) & 0xFF);
+	outFile.put((v >> 24) & 0xFF);
+}
+
+
+void putShort(std::ofstream& outFile, const uint v) {
+	outFile.put((v >> 0) & 0xFF);
+	outFile.put((v >> 8) & 0xFF);
+}
+void writeBMP(const Header* const header, const MCU* const mcus, const std::string outFileName) {
+	//open file
+	std::ofstream outFile = std::ofstream(outFileName, std::ios::out | std::ios::binary);
+	if(!outFile.is_open()) {
+		std::cout << "Error - Error opening output file\n";
+		return;
+	}
+
+	const uint mcuHeight = (header->height + 7) / 8;
+	const uint mcuWidth = (header->width + 7) / 8;
+
+	//mutiple times of 4 bytes each row,
+	// if width = 1, paddSize = 1
+	// if width = 2, paddingsize = 2
+	// if width = 3, paddingsize = 3
+	// if width = 4, paddingSize = 0
+	const uint paddingSize = header->width % 4;
+
+	//File Header 14 bytes,
+	//mapInfo Header 12 bytes;
+	const uint size = 14 + 12 + header->height * header->width * 3 + paddingSize * header->height;
+
+	//File Header
+	//first two bytes
+	outFile.put('B');
+	outFile.put('M');
+	//4bytes of the BMP file in bytes
+	putInt(outFile, size);
+	//reserved 4 bytes
+	putInt(outFile, 0);
+	//The offset of the byte where the bitmap image data can be found.
+	putInt(outFile, 0x1A);
+
+	//BITMAPINFOHeader contains info about the dimensions and colors
+	putInt(outFile, 12);//num of bytes 
+	putShort(outFile, header->width);// width
+	putShort(outFile, header->height);//height
+	putShort(outFile, 1);// number of planes , must be 1
+	putShort(outFile, 24);//number of bits-per-pixel
+
+	//这里有一点就是 因为y是无符号数，所有y<header->height的判断条件可以不变
+	for(uint y = header->height - 1; y < header->height; --y) { 
+		const uint mcuRow = y / 8;
+		const uint pixelRow = y % 8;
+		for (uint x = 0; x < header->width; ++x)
+		{
+			const uint mcuColumn = x / 8;
+			const uint pixelColumn = x % 8;
+			const uint mcuIndex = mcuRow * mcuWidth + mcuColumn;
+			const uint pixelIndex = pixelRow * 8 + pixelColumn;
+			outFile.put(mcus[mcuIndex].b[pixelIndex]);
+			outFile.put(mcus[mcuIndex].g[pixelIndex]);
+			outFile.put(mcus[mcuIndex].r[pixelIndex]);
+		}
+		for (uint i = 0; i < paddingSize; i++)
+		{
+			outFile.put(0);
+		}
+	}
+	outFile.close();
+}
 
 int main() {
 
@@ -619,6 +695,18 @@ int main() {
 
 	printHeader(header);
 	std::cout << "done" << std::endl;
+
+	//decode huffman data
+	MCU* mcus = blackBox(header);
+	//write BMP file
+	if (mcus != nullptr)
+	{	
+		const std::size_t pos = filename.find_last_of('.');
+		const std::string outFileName = (pos == std::string::npos) ? (filename + ".") : (filename.substr(0, pos) + ".bmp");
+		writeBMP(header, mcus, outFileName);
+	}
+	
+	delete[] mcus;
 	delete header;
 	return 0;
 }
