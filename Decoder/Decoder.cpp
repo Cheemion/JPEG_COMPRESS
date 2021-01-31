@@ -1,8 +1,205 @@
 #include <iostream>
 #include <fstream>
 #include "Jpeg.h"
-MCU* blackBox(const Header* const header) {
 
+class BitReader
+{
+private:
+	uint nextByte = 0;
+	uint nextBit = 0;
+	const std::vector<byte>& data;
+public:
+	BitReader(const std::vector<byte>& d) : data(d) {}
+	// read one bit (0 1) for return -1.
+	int readBit() {
+		if(nextByte >= data.size()) {
+			return -1;
+		}
+		//一位一位的读取, 其实用0 1 2 4 或 是另外一种选择
+		int bit = (data[nextByte] >> (7 - nextByte)) & 1;
+		nextBit = nextBit + 1;
+		//一个字节读完了
+		if(nextBit == 8) {
+			nextBit = 0;
+			nextByte = nextByte + 1;
+		}
+		return bit;
+	}
+
+	int readBits(const uint length) {
+		int bits = 0;
+		for (uint i = 0; i < length; i++)
+		{
+			int bit = readBit();
+			if (bit == -1) {
+				bits = -1;
+				break;
+			}
+			bits = (bits << 1) | bit;
+		}
+		return bits;
+	}
+	//if there are bits remaining,
+	//advance to the 0th bit of the next byte
+	void align() {
+		if(nextByte >= data.size()) {
+			return;
+		}
+		if (nextBit != 0) {
+			nextBit = 0;
+			nextByte = nextByte + 1;
+		}
+	}
+};
+
+
+
+//generate all huffman codes based on symbols from a huffman table
+//长度加1 append 0
+//assign后 再加1
+void generateCodes(HuffmanTable& hTable) {
+	uint code = 0;
+	for(uint i = 0; i < 16; i++) {
+		for (uint j = hTable.offsets[i]; j < hTable.offsets[i + 1]; j++) {
+			hTable.codes[j] = code;
+			code = code + 1;
+		}
+		code = code << 1;
+	}
+}
+
+byte getNextSymbol(BitReader& b, const HuffmanTable& hTable) {
+	uint currentCode = 0;
+	for(uint i = 0; i < 16; i++) {
+		int bit = b.readBit();
+		if(bit == -1) {
+			return -1; // -1 is 1111111111 in memory and 255 is not used in symbol
+		}
+		currentCode = (currentCode << 1) | bit;
+		for (uint j = hTable.offsets[i]; j < hTable.offsets[i + 1]; i++) {
+			if(currentCode == hTable.codes[j]) {
+				return hTable.symbols[j];
+			}
+		}
+	}
+	return -1;
+}
+
+bool decodeMCUComponent(BitReader& b, int* const component,int& previousDC, const HuffmanTable& dcTable, const HuffmanTable& acTable) {
+	//get the DC value for this MCU component
+	// DC symbols 的 number of zeros 永远为0， length从0到11
+	//DC symbol 几等于 DC length 因为0的个数为0
+	byte length = getNextSymbol(b, dcTable);
+	if(length == (byte)-1) {
+		std::cout << "Error - Invalid DC value \n";
+		return false;
+	}
+	// DC 从0 to 11
+	if(length > 11) {
+		std::cout << "Error - DC coefficient length greater than 11 \n";
+		return false;
+	}
+	
+	//length =0 return 0
+	int coeff = b.readBits(length);
+	if(coeff == -1) {
+		std::cout << "Error - Invalid DC value \n";
+		return false;
+	}
+
+	//长度1: 1, -1
+	//length 2: 1 2 -2 -1
+	//3:1 2 3 4, -4 -3 -2 -1
+	if(length != 0 && coeff < (1 << (length - 1))) {
+		coeff = coeff - ((1 << length) - 1);
+	}
+	component[0] = coeff + previousDC;
+	previousDC = component[0];
+	// get AC values
+	uint i = 1;
+	while(i < 64) {
+		byte symbol = getNextSymbol(b, acTable);
+		if(symbol == (byte)-1) {
+			std::cout << "Erroor - Invalid AC value \n";
+			return false;
+		}
+		//0x00 means fill reaminder of 0;
+		if (symbol == 0x00) {
+			for(; i < 64; i++) {
+				component[ZIG_ZAG[i]] = 0;
+			}
+			return true;
+		}
+		//symbol 0xF0 means skip 16 0's
+		byte numZeros = symbol == 0xF0 ? 16 : symbol >> 4;
+		byte coeffLength = symbol & 0x0F;
+		coeff = 0;
+		if (i + numZeros >= 64) {
+			std::cout << "Error - Zero run-length exceeded MCU\n";
+			return false;
+		}
+		for (uint j = 0; j < numZeros; j++, i++)
+		{
+			component[ZIG_ZAG[i]] = 0;
+		}
+		if (coeffLength != 0) {
+			coeff = b.readBits(coeffLength);
+			if (coeff == -1)
+			{
+				std::cout << "Error - Invalid AC value\n";
+				return false;
+			}
+
+			if(coeff < (1 << (length - 1))) {
+				coeff = coeff - ((1 << length) - 1);
+			}
+
+			component[ZIG_ZAG[i]] = coeff;
+			i++;
+		}
+	}
+	return true;
+}
+
+
+MCU* decodeHuffmanData(Header* const header) {
+	const uint mcuHeight = (header->height + 7) / 8;
+	const uint mcuWidth = (header->width + 7) / 8;
+	MCU* mcus = new (std::nothrow) MCU[mcuHeight * mcuWidth];
+	if (mcus == nullptr)
+	{
+		std::cout << "Error - Memory error\n";
+		return nullptr;
+	}
+
+	for (uint i = 0; i < 4; i++)
+	{
+		if(header->huffmanDCTables[i].set) {
+			generateCodes(header->huffmanDCTables[i]);
+		}
+		if(header->huffmanACTables[i].set) {
+			generateCodes(header->huffmanACTables[i]);
+		}
+	}
+
+	BitReader b(header->huffmanData);
+	int previousDCs[3] = { 0 };
+	for (uint i = 0; i < mcuHeight * mcuWidth; i++) {
+		for (uint j = 0; j < header->numComponents; j++) {	
+			//restartInterval
+			if(header->restartInterval != 0 && i % header->restartInterval == 0) {
+				previousDCs[0] = previousDCs[1] = previousDCs[2] = 0;
+				b.align();
+			}
+			//signal channel and signal mcu
+			if(!decodeMCUComponent(b, mcus[i][j], previousDCs[j] ,header->huffmanDCTables[header->colorComponent[j].huffmanDCTableID], header->huffmanACTables[header->colorComponent[j].huffmanACTableID])) {
+				delete[] mcus;
+				return nullptr;
+			}
+		}
+	}
+
+	return mcus;	
 }
 void readQuantizationTable(std::ifstream& inFile, Header* const header) {
 	std::cout << "Reading DQT" << std::endl;
@@ -650,7 +847,7 @@ void writeBMP(const Header* const header, const MCU* const mcus, const std::stri
 
 	//BITMAPINFOHeader contains info about the dimensions and colors
 	putInt(outFile, 12);//num of bytes 
-	putShort(outFile, header->width);// width
+	putShort(outFile, header->width);// width 
 	putShort(outFile, header->height);//height
 	putShort(outFile, 1);// number of planes , must be 1
 	putShort(outFile, 24);//number of bits-per-pixel
@@ -678,7 +875,7 @@ void writeBMP(const Header* const header, const MCU* const mcus, const std::stri
 }
 
 int main() {
-
+	
 	//jpeg file path
 	const std::string filename(EXAMPLE_PATH);
 
@@ -697,16 +894,19 @@ int main() {
 	std::cout << "done" << std::endl;
 
 	//decode huffman data
-	MCU* mcus = blackBox(header);
+	MCU* mcus = decodeHuffmanData(header);
 	//write BMP file
-	if (mcus != nullptr)
+	if (mcus == nullptr)
 	{	
-		const std::size_t pos = filename.find_last_of('.');
-		const std::string outFileName = (pos == std::string::npos) ? (filename + ".") : (filename.substr(0, pos) + ".bmp");
-		writeBMP(header, mcus, outFileName);
+		delete header;
+		return 0;
 	}
-	
+	// write BMP file
+	const std::size_t pos = filename.find_last_of('.');
+	const std::string outFileName = (pos == std::string::npos) ? (filename + ".") : (filename.substr(0, pos) + ".bmp");
+	writeBMP(header, mcus, outFileName);
 	delete[] mcus;
 	delete header;
+
 	return 0;
 }

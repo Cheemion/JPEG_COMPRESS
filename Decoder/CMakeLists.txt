@@ -10,6 +10,6 @@ message(STATUS "The CMAKE_CXX_FLAGS is ${CMAKE_CXX_FLAGS}")
 set(CMAKE_BUILD_TYPE Debug)
 add_definitions(-DEXAMPLE_PATH="${EXAMPLE_PATH}")
 add_executable(
-	Decoder
+	Decoder 
 	Decoder.cpp
 )

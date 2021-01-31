@@ -91,9 +91,14 @@ const byte COM = 0xFE;
 const byte TEM = 0x01;
 
 struct HuffmanTable
-{
+{	
+	//长度为1的symbols的index 从offsets[0] 到 offsets[1](exclusive) 为止
+	//长度为16的symbols的index 从offsets[15] 到 offsets[16](exclusive) 为止
 	byte offsets[17] = { 0 };
+	//AC totall 162 symbols
 	byte symbols[162] = { 0 };
+	//真实的0101010的编码
+	uint codes[162] = { 0 };
 	bool set = false;
 };
 
@@ -136,6 +141,19 @@ struct MCU {
 		int cr[64] = { 0 };
 		int b[64];
 	};
+	int* operator[](uint i) {
+		switch (i)
+		{
+			case 0:
+				return y;
+			case 1:
+				return cb;
+			case 2:	
+				return cr;
+			default:
+				return nullptr;
+		}
+	}
 };
 
 struct Header
@@ -144,7 +162,7 @@ struct Header
 	byte endOfSelection = 63;
 	byte successiveApproximationHigh = 0;
 	byte successiveApproximationLow = 0;
-	std::vector<byte> huffmanData;
+	std::vector<byte> huffmanData; 
 	HuffmanTable huffmanDCTables[4];
 	HuffmanTable huffmanACTables[4];
 	bool zeroBased = false;
