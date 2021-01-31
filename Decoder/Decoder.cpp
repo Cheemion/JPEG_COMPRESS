@@ -16,7 +16,7 @@ public:
 			return -1;
 		}
 		//一位一位的读取, 其实用0 1 2 4 或 是另外一种选择
-		int bit = (data[nextByte] >> (7 - nextByte)) & 1;
+		int bit = (data[nextByte] >> (7 - nextBit)) & 1;
 		nextBit = nextBit + 1;
 		//一个字节读完了
 		if(nextBit == 8) {
@@ -76,7 +76,7 @@ byte getNextSymbol(BitReader& b, const HuffmanTable& hTable) {
 			return -1; // -1 is 1111111111 in memory and 255 is not used in symbol
 		}
 		currentCode = (currentCode << 1) | bit;
-		for (uint j = hTable.offsets[i]; j < hTable.offsets[i + 1]; i++) {
+		for (uint j = hTable.offsets[i]; j < hTable.offsets[i + 1]; j++) {
 			if(currentCode == hTable.codes[j]) {
 				return hTable.symbols[j];
 			}
