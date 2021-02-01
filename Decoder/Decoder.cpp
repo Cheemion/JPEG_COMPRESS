@@ -874,6 +874,24 @@ void writeBMP(const Header* const header, const MCU* const mcus, const std::stri
 	outFile.close();
 }
 
+void dequantizeMCUComponent(const QuantizationTable& qTable, int* const component) {
+	for (uint i = 0; i < 64; i++) {
+		component[i] = component[i] * qTable.table[i];
+	}
+}
+
+void dequantize(const Header* const header, MCU* const mucs) {
+	const uint mcuHeight = (header->height + 7) / 8;
+	const uint mcuWidth = (header->width + 7) / 8;
+	for (uint i = 0; i < mcuHeight * mcuWidth; i++) {
+		for (uint j = 0; j < header->numComponents; j++) {
+			dequantizeMCUComponent(header->quantizationTables[header->colorComponent[j].quantizationTableID], mucs[i][j]);
+		}
+	}
+}
+
+
+
 int main() {
 	
 	//jpeg file path
@@ -901,6 +919,9 @@ int main() {
 		delete header;
 		return 0;
 	}
+
+	dequantize(header, mcus);
+
 	// write BMP file
 	const std::size_t pos = filename.find_last_of('.');
 	const std::string outFileName = (pos == std::string::npos) ? (filename + ".") : (filename.substr(0, pos) + ".bmp");
