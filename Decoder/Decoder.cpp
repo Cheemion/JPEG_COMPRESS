@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
+#include <cmath>
 #include "Jpeg.h"
-
 class BitReader
 {
 private:
@@ -890,6 +890,40 @@ void dequantize(const Header* const header, MCU* const mucs) {
 	}
 }
 
+void inverseDCTComponent(const QuantizationTable& qTable, int* const component) {
+	int result[64] = { 0 };
+	for (uint y = 0; y < 8; y++) {
+		for (uint x = 0; x < 8; x++) {
+			double sum = 0.0;
+			for (uint i = 0; i < 8; i++) {
+				for (uint j = 0; j < 8; j++) {	
+					double ci = i == 0 ? 1.0 / std::sqrt(2.0) : 1.0;
+					double cj = j == 0 ? 1.0 / std::sqrt(2.0) : 1.0;
+					sum = sum + ci * cj * component[i * 8 + j]
+						* std::cos((2.0 * x + 1.0) * j * M_PI / 16.0)
+						* std::cos((2.0 * y + 1.0) * i * M_PI / 16.0);
+				}
+			}
+			sum = sum / 4.0;
+			result[y * 8 + x] = static_cast<int>(sum);
+		}
+	}
+	for (uint i = 0; i < 64; i++)
+	{
+		component[i] = result[i];
+	}
+	
+}
+
+void inverseDCT(const Header* const header, MCU* const mucs) {
+	const uint mcuHeight = (header->height + 7) / 8;
+	const uint mcuWidth = (header->width + 7) / 8;
+	for (uint i = 0; i < mcuHeight * mcuWidth; i++) {
+		for (uint j = 0; j < header->numComponents; j++) {
+			inverseDCTComponent(header->quantizationTables[header->colorComponent[j].quantizationTableID], mucs[i][j]);
+		}
+	}
+}
 
 
 int main() {
@@ -909,7 +943,7 @@ int main() {
 	}
 
 	printHeader(header);
-	std::cout << "done" << std::endl;
+
 
 	//decode huffman data
 	MCU* mcus = decodeHuffmanData(header);
@@ -922,6 +956,9 @@ int main() {
 
 	dequantize(header, mcus);
 
+	inverseDCT(header, mcus);
+
+	std::cout << "done" << std::endl;
 	// write BMP file
 	const std::size_t pos = filename.find_last_of('.');
 	const std::string outFileName = (pos == std::string::npos) ? (filename + ".") : (filename.substr(0, pos) + ".bmp");
