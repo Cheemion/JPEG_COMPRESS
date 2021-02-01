@@ -890,37 +890,64 @@ void dequantize(const Header* const header, MCU* const mucs) {
 	}
 }
 
-void inverseDCTComponent(const QuantizationTable& qTable, int* const component) {
+/**
+ * void inverseDCTComponent(const float* const idctMap, int* const component) {
 	int result[64] = { 0 };
 	for (uint y = 0; y < 8; y++) {
 		for (uint x = 0; x < 8; x++) {
-			double sum = 0.0;
-			for (uint i = 0; i < 8; i++) {
-				for (uint j = 0; j < 8; j++) {	
-					double ci = i == 0 ? 1.0 / std::sqrt(2.0) : 1.0;
-					double cj = j == 0 ? 1.0 / std::sqrt(2.0) : 1.0;
-					sum = sum + ci * cj * component[i * 8 + j]
-						* std::cos((2.0 * x + 1.0) * j * M_PI / 16.0)
-						* std::cos((2.0 * y + 1.0) * i * M_PI / 16.0);
+			float sum = 0.0;
+			for (uint v = 0; v < 8; v++) {
+				for (uint u = 0; u < 8; u++) {	
+					sum = sum + component[v * 8 + u] * idctMap[u * 8 + x] * idctMap[v * 8 + y];
 				}
 			}
-			sum = sum / 4.0;
 			result[y * 8 + x] = static_cast<int>(sum);
 		}
 	}
-	for (uint i = 0; i < 64; i++)
-	{
+	for (uint i = 0; i < 64; i++) {
 		component[i] = result[i];
 	}
-	
+}
+ * 
+ * 
+ * 
+*/
+
+void inverseDCTComponent(const float* const idctMap, int* const component) {
+	float result[64] = { 0 };
+	for (uint i = 0; i < 8; i++) {
+		for (uint y = 0; y < 8; y++) {
+			float sum = 0.0f;
+			for (uint v = 0; v < 8; v++) {
+				sum = sum + component[v * 8 + i] * idctMap[v * 8 + y];
+			}
+			result[y * 8 + i] = sum;
+		}
+	}
+	for (uint i = 0; i < 8; i++) {
+		for (uint x = 0; x < 8; x++) {
+			float sum = 0.0f;
+			for (uint u = 0; u < 8; u++) {
+				sum = sum + result[i * 8 + u] * idctMap[u * 8 + x];
+			}
+			component[i * 8 + x] = (int)sum;
+		}
+	}
 }
 
 void inverseDCT(const Header* const header, MCU* const mucs) {
+	float idctMap[64];
+	for (uint u = 0; u < 8; u++) {
+		const float c = (u == 0) ? (1.0 / std::sqrt(2.0) / 2.0) : (1.0 / 2.0);
+		for (uint x = 0; x < 8; x++) {
+			idctMap[u * 8 + x] = c * std::cos((2.0 * x + 1.0) * u * M_PI / 16.0);
+		}
+	}
 	const uint mcuHeight = (header->height + 7) / 8;
 	const uint mcuWidth = (header->width + 7) / 8;
 	for (uint i = 0; i < mcuHeight * mcuWidth; i++) {
 		for (uint j = 0; j < header->numComponents; j++) {
-			inverseDCTComponent(header->quantizationTables[header->colorComponent[j].quantizationTableID], mucs[i][j]);
+			inverseDCTComponent(idctMap, mucs[i][j]);
 		}
 	}
 }
