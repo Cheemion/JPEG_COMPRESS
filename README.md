@@ -1,2 +1,3 @@
 # JPEG_COMPRESS
-A step by step project that teaches people how jpg works, jpg压缩和解压代码.
+JPEG的压缩和解压代码，理解JPEG的压缩原理.
+A step by step project that teaches people how JPEG works, 
