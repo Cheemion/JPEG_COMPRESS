@@ -28,8 +28,7 @@ public:
 
 	int readBits(const uint length) {
 		int bits = 0;
-		for (uint i = 0; i < length; i++)
-		{
+		for (uint i = 0; i < length; i++) {
 			int bit = readBit();
 			if (bit == -1) {
 				bits = -1;
@@ -131,17 +130,28 @@ bool decodeMCUComponent(BitReader& b, int* const component,int& previousDC, cons
 			return true;
 		}
 		//symbol 0xF0 means skip 16 0's
-		byte numZeros = symbol == 0xF0 ? 16 : symbol >> 4;
+		byte numZeros = symbol >> 4;
 		byte coeffLength = symbol & 0x0F;
 		coeff = 0;
+		if (symbol == 0xF0) {
+			numZeros = 16;
+		}
+
 		if (i + numZeros >= 64) {
 			std::cout << "Error - Zero run-length exceeded MCU\n";
 			return false;
 		}
-		for (uint j = 0; j < numZeros; j++, i++)
-		{
+
+		for (uint j = 0; j < numZeros; j++, i++) {
 			component[ZIG_ZAG[i]] = 0;
 		}
+		
+		if (coeffLength > 10)		
+		{
+			std::cout << "Error - AC coefficient length greater than 10\n";
+			return false;
+		}
+
 		if (coeffLength != 0) {
 			coeff = b.readBits(coeffLength);
 			if (coeff == -1)
@@ -150,8 +160,8 @@ bool decodeMCUComponent(BitReader& b, int* const component,int& previousDC, cons
 				return false;
 			}
 
-			if(coeff < (1 << (length - 1))) {
-				coeff = coeff - ((1 << length) - 1);
+			if(coeff < (1 << (coeffLength - 1))) {
+				coeff = coeff - ((1 << coeffLength) - 1);
 			}
 
 			component[ZIG_ZAG[i]] = coeff;
@@ -166,14 +176,12 @@ MCU* decodeHuffmanData(Header* const header) {
 	const uint mcuHeight = (header->height + 7) / 8;
 	const uint mcuWidth = (header->width + 7) / 8;
 	MCU* mcus = new (std::nothrow) MCU[mcuHeight * mcuWidth];
-	if (mcus == nullptr)
-	{
+	if (mcus == nullptr) {
 		std::cout << "Error - Memory error\n";
 		return nullptr;
 	}
 
-	for (uint i = 0; i < 4; i++)
-	{
+	for (uint i = 0; i < 4; i++) {
 		if(header->huffmanDCTables[i].set) {
 			generateCodes(header->huffmanDCTables[i]);
 		}
@@ -188,7 +196,9 @@ MCU* decodeHuffmanData(Header* const header) {
 		for (uint j = 0; j < header->numComponents; j++) {	
 			//restartInterval
 			if(header->restartInterval != 0 && i % header->restartInterval == 0) {
-				previousDCs[0] = previousDCs[1] = previousDCs[2] = 0;
+				previousDCs[0] = 0;
+				previousDCs[1] = 0;
+				previousDCs[2] = 0;
 				b.align();
 			}
 			//signal channel and signal mcu
@@ -912,7 +922,6 @@ void dequantize(const Header* const header, MCU* const mucs) {
  * 
  * 
 */
-
 void inverseDCTComponent(const float* const idctMap, int* const component) {
 	float result[64] = { 0 };
 	for (uint i = 0; i < 8; i++) {
@@ -936,6 +945,7 @@ void inverseDCTComponent(const float* const idctMap, int* const component) {
 }
 
 void inverseDCT(const Header* const header, MCU* const mucs) {
+	//inverse DCT map
 	float idctMap[64];
 	for (uint u = 0; u < 8; u++) {
 		const float c = (u == 0) ? (1.0 / std::sqrt(2.0) / 2.0) : (1.0 / 2.0);
@@ -951,7 +961,30 @@ void inverseDCT(const Header* const header, MCU* const mucs) {
 		}
 	}
 }
+void YCbCrToRGBMCU(MCU& mcu) {
+	for (uint i = 0; i < 64; i++) {
+		int r = mcu.y[i]  					  + 1.402f * mcu.cr[i] + 128;
+		int g = mcu.y[i] - 0.344f * mcu.cb[i] - 0.714f * mcu.cr[i] + 128;
+		int b = mcu.y[i] + 1.772f * mcu.cb[i] 					   + 128;
+		r = r < 0 ? 0 : r;
+		r = r > 255 ? 255 : r;
+		g = g < 0 ? 0 : g;
+		g = g > 255 ? 255 : g;
+		b = b < 0 ? 0 : b;
+		b = b > 255 ? 255 : b;
+		mcu.r[i] = r;
+		mcu.g[i] = g;
+		mcu.b[i] = b;
+	}
+}
 
+void YCbCrToRGB(const Header* const header, MCU* const mucs) {
+	const uint mcuHeight = (header->height + 7) / 8;
+	const uint mcuWidth = (header->width + 7) / 8;
+	for (uint i = 0; i < mcuHeight * mcuWidth; i++) {
+		YCbCrToRGBMCU(mucs[i]);
+	}
+}
 
 int main() {
 	
@@ -984,6 +1017,8 @@ int main() {
 	dequantize(header, mcus);
 
 	inverseDCT(header, mcus);
+
+	YCbCrToRGB(header, mcus);
 
 	std::cout << "done" << std::endl;
 	// write BMP file
