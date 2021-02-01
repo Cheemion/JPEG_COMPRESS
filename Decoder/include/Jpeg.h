@@ -128,6 +128,8 @@ struct ColorComponent {
 	bool used = false;
 };
 
+//a mcu will be composed of mutiple of 8*8 blocks when subsampling is taken into account
+//
 struct MCU {
 	union {
 		int y[64] = { 0 };
@@ -174,5 +176,16 @@ struct Header
 	byte numComponents = 0;
 	uint restartInterval = 0;
 	bool valid = true;
+
+	//take one 8 * 8 block into account
+	uint mcuHeight = 0;
+	uint mcuWidth = 0;
+	//take a mcu into account
+	uint mcuHeightReal = 0;
+	uint mcuWidthReal = 0;
+
+	// maximum sampling factor
+	byte horizontalSamplingFactor = 1;
+	byte verticalSamplingFactor = 1;
 };
 

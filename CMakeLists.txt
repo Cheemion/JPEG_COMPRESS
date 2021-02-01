@@ -4,7 +4,7 @@
 cmake_minimum_required (VERSION 3.8)
 
 project ("JPEG_COMPRESS")
-set(EXAMPLE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/resource/test.jpg")
+set(EXAMPLE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/resource/lina.jpg")
 
 # Include sub-projects.
 add_subdirectory ("Day1")

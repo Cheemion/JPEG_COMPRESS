@@ -173,9 +173,8 @@ bool decodeMCUComponent(BitReader& b, int* const component,int& previousDC, cons
 
 
 MCU* decodeHuffmanData(Header* const header) {
-	const uint mcuHeight = (header->height + 7) / 8;
-	const uint mcuWidth = (header->width + 7) / 8;
-	MCU* mcus = new (std::nothrow) MCU[mcuHeight * mcuWidth];
+
+	MCU* mcus = new (std::nothrow) MCU[header->mcuHeightReal * header->mcuWidthReal];
 	if (mcus == nullptr) {
 		std::cout << "Error - Memory error\n";
 		return nullptr;
@@ -192,23 +191,42 @@ MCU* decodeHuffmanData(Header* const header) {
 
 	BitReader b(header->huffmanData);
 	int previousDCs[3] = { 0 };
-	for (uint i = 0; i < mcuHeight * mcuWidth; i++) {
-		for (uint j = 0; j < header->numComponents; j++) {	
-			//restartInterval
-			if(header->restartInterval != 0 && i % header->restartInterval == 0) {
+
+	//for one mcu(minumum data block coded at a time). so thats y < header->mcuHeight not mcuHeightReal
+	for (uint y = 0; y < header->mcuHeight; y = y + header->verticalSamplingFactor) {
+		for (uint x = 0; x < header->mcuWidth; x = x + header->horizontalSamplingFactor) {
+			
+			//从mcu而言 换成block而言
+			uint restartInterval = header->restartInterval * header->horizontalSamplingFactor * header->verticalSamplingFactor;
+
+			//restartInterval 是对于mcu而言的
+			if(restartInterval != 0 && (y * header->mcuWidthReal + x) % restartInterval == 0) {
 				previousDCs[0] = 0;
 				previousDCs[1] = 0;
 				previousDCs[2] = 0;
 				b.align();
 			}
-			//signal channel and signal mcu
-			if(!decodeMCUComponent(b, mcus[i][j], previousDCs[j] ,header->huffmanDCTables[header->colorComponent[j].huffmanDCTableID], header->huffmanACTables[header->colorComponent[j].huffmanACTableID])) {
-				delete[] mcus;
-				return nullptr;
+			
+			for (uint i = 0; i < header->numComponents; i++) {
+				for (uint v = 0; v < header->colorComponent[i].verticalSamplingFactor; v++) {
+					for (uint h = 0; h < header->colorComponent[i].horizontalSamplingFactor; h++) {
+						
+						//signal channel and signal mcu
+						if(!decodeMCUComponent(
+								b, 
+								mcus[(y + v) * header->mcuWidthReal + (x + h)][i], 
+								previousDCs[i],
+								header->huffmanDCTables[header->colorComponent[i].huffmanDCTableID], header->huffmanACTables[header->colorComponent[i].huffmanACTableID])) {
+							delete[] mcus;
+							return nullptr;
+						}
+
+					}
+				}
 			}
+
 		}
 	}
-
 	return mcus;	
 }
 void readQuantizationTable(std::ifstream& inFile, Header* const header) {
@@ -430,6 +448,12 @@ void readStartOfFrame(std::ifstream& inFile, Header* const header) {
 	header->height = (inFile.get() << 8) + inFile.get();
 	header->width = (inFile.get() << 8) + inFile.get();
 
+	header->mcuHeight = (header->height + 7) / 8;
+	header->mcuWidth = (header->width + 7) / 8;
+
+	header->mcuHeightReal = header->mcuHeight;
+	header->mcuWidthReal = header->mcuWidth;
+
 	if (header->height == 0 || header->width == 0) {
 		std::cout << "zero width or height\n";
 		header->valid = false;
@@ -482,11 +506,37 @@ void readStartOfFrame(std::ifstream& inFile, Header* const header) {
 		component->verticalSamplingFactor = samplingFactor & 0x0F;
 		component->quantizationTableID = inFile.get();
 
-		if (component->horizontalSamplingFactor != 1 || component->horizontalSamplingFactor != 1) {
-			std::cout << "only support samplingFacotor that is 1";
-			//header->valid = false;
-			//return;
+		//lunimance channel
+		//只支持1 或者 2
+		//horizontal 2的话 代表读取y0 y1, cb cr
+		//如果vertical 也2的话, 代表读取 y0 y1 y2 y3 cb cr
+		if	(componentID == 1) {
+
+			if (component->horizontalSamplingFactor != 1 && component->verticalSamplingFactor != 2 &&component->verticalSamplingFactor != 1 && component->horizontalSamplingFactor != 2) {
+				std::cout << "only support samplingFacotor that is 1";
+				header->valid = false;
+				return;
+			}
+
+			if(component->horizontalSamplingFactor == 2 && header->mcuWidth % 2 == 1) {
+				header->mcuWidthReal++;
+			}
+
+			if(component->verticalSamplingFactor == 2 && header->mcuHeight % 2 == 1) {
+				header->verticalSamplingFactor++;
+			}
+
+			header->horizontalSamplingFactor = component->horizontalSamplingFactor;
+			header->verticalSamplingFactor = component->verticalSamplingFactor;
+		} else { 
+			//cb cr在一个mcu中永远是一个
+			if (component->horizontalSamplingFactor != 1 || component->verticalSamplingFactor != 1) {
+				std::cout << "only support samplingFacotor that is 1";
+				header->valid = false;
+				return;
+			}
 		}
+
 
 		if (component->quantizationTableID > 3) {
 			std::cout << "not valid quantization talbe id";
@@ -830,9 +880,6 @@ void writeBMP(const Header* const header, const MCU* const mcus, const std::stri
 		return;
 	}
 
-	const uint mcuHeight = (header->height + 7) / 8;
-	const uint mcuWidth = (header->width + 7) / 8;
-
 	//mutiple times of 4 bytes each row,
 	// if width = 1, paddSize = 1
 	// if width = 2, paddingsize = 2
@@ -866,11 +913,10 @@ void writeBMP(const Header* const header, const MCU* const mcus, const std::stri
 	for(uint y = header->height - 1; y < header->height; --y) { 
 		const uint mcuRow = y / 8;
 		const uint pixelRow = y % 8;
-		for (uint x = 0; x < header->width; ++x)
-		{
+		for (uint x = 0; x < header->width; ++x) {
 			const uint mcuColumn = x / 8;
 			const uint pixelColumn = x % 8;
-			const uint mcuIndex = mcuRow * mcuWidth + mcuColumn;
+			const uint mcuIndex = mcuRow * header->mcuWidthReal + mcuColumn;
 			const uint pixelIndex = pixelRow * 8 + pixelColumn;
 			outFile.put(mcus[mcuIndex].b[pixelIndex]);
 			outFile.put(mcus[mcuIndex].g[pixelIndex]);
@@ -890,12 +936,16 @@ void dequantizeMCUComponent(const QuantizationTable& qTable, int* const componen
 	}
 }
 
-void dequantize(const Header* const header, MCU* const mucs) {
-	const uint mcuHeight = (header->height + 7) / 8;
-	const uint mcuWidth = (header->width + 7) / 8;
-	for (uint i = 0; i < mcuHeight * mcuWidth; i++) {
-		for (uint j = 0; j < header->numComponents; j++) {
-			dequantizeMCUComponent(header->quantizationTables[header->colorComponent[j].quantizationTableID], mucs[i][j]);
+void dequantize(const Header* const header, MCU* const mcus) {
+	for (uint y = 0; y < header->mcuHeight; y = y + header->verticalSamplingFactor) {
+		for (uint x = 0; x < header->mcuWidth; x = x + header->horizontalSamplingFactor) {
+			for (uint i = 0; i < header->numComponents; i++) {
+				for (uint v = 0; v < header->colorComponent[i].verticalSamplingFactor; v++) {
+					for (uint h = 0; h < header->colorComponent[i].horizontalSamplingFactor; h++) {
+						dequantizeMCUComponent(header->quantizationTables[header->colorComponent[i].quantizationTableID], mcus[(y + v) * header->mcuWidthReal + (x + h)][i]);
+					}
+				}
+			}
 		}
 	}
 }
@@ -953,36 +1003,59 @@ void inverseDCT(const Header* const header, MCU* const mucs) {
 			idctMap[u * 8 + x] = c * std::cos((2.0 * x + 1.0) * u * M_PI / 16.0);
 		}
 	}
-	const uint mcuHeight = (header->height + 7) / 8;
-	const uint mcuWidth = (header->width + 7) / 8;
-	for (uint i = 0; i < mcuHeight * mcuWidth; i++) {
-		for (uint j = 0; j < header->numComponents; j++) {
-			inverseDCTComponent(idctMap, mucs[i][j]);
+
+	for (uint y = 0; y < header->mcuHeight; y = y + header->verticalSamplingFactor) {
+		for (uint x = 0; x < header->mcuWidth; x = x + header->horizontalSamplingFactor) {
+			for (uint i = 0; i < header->numComponents; i++) {
+				for (uint v = 0; v < header->colorComponent[i].verticalSamplingFactor; v++) {
+					for (uint h = 0; h < header->colorComponent[i].horizontalSamplingFactor; h++) {
+						inverseDCTComponent(idctMap, mucs[(y + v) * header->mcuWidthReal + (x + h)][i]);
+					}
+				}
+			}
 		}
 	}
 }
-void YCbCrToRGBMCU(MCU& mcu) {
-	for (uint i = 0; i < 64; i++) {
-		int r = mcu.y[i]  					  + 1.402f * mcu.cr[i] + 128;
-		int g = mcu.y[i] - 0.344f * mcu.cb[i] - 0.714f * mcu.cr[i] + 128;
-		int b = mcu.y[i] + 1.772f * mcu.cb[i] 					   + 128;
-		r = r < 0 ? 0 : r;
-		r = r > 255 ? 255 : r;
-		g = g < 0 ? 0 : g;
-		g = g > 255 ? 255 : g;
-		b = b < 0 ? 0 : b;
-		b = b > 255 ? 255 : b;
-		mcu.r[i] = r;
-		mcu.g[i] = g;
-		mcu.b[i] = b;
+void YCbCrToRGBMCU(const Header* const header, MCU& mcu, const MCU& cbcr, const uint v, const uint h) {
+	//从bottom-right to top-left
+	for (uint y = 7; y < 8; y--) {
+		for (uint x = 7; x < 8; x--) {
+			//chroma 分量用了第一个block的
+			//luminance 分量不变
+			const uint pixel = y * 8 + x;
+			const uint cbcrPixelRow = y / header->verticalSamplingFactor + 4 * v;
+			const uint cbcrPixelColumn = x / header->horizontalSamplingFactor + 4 * h;
+			const uint cbcrPixel = cbcrPixelRow * 8 + cbcrPixelColumn;
+			int r = mcu.y[pixel]  						       + 1.402f * cbcr.cr[cbcrPixel] + 128;
+			int g = mcu.y[pixel] - 0.344f * cbcr.cb[cbcrPixel] - 0.714f * cbcr.cr[cbcrPixel] + 128;
+			int b = mcu.y[pixel] + 1.772f * cbcr.cb[cbcrPixel] 							     + 128;
+			r = r < 0 ? 0 : r;
+			r = r > 255 ? 255 : r;
+			g = g < 0 ? 0 : g;
+			g = g > 255 ? 255 : g;
+			b = b < 0 ? 0 : b;
+			b = b > 255 ? 255 : b;
+			mcu.r[pixel] = r;
+			mcu.g[pixel] = g;
+			mcu.b[pixel] = b;
+		}
 	}
+	
+
 }
 
 void YCbCrToRGB(const Header* const header, MCU* const mucs) {
-	const uint mcuHeight = (header->height + 7) / 8;
-	const uint mcuWidth = (header->width + 7) / 8;
-	for (uint i = 0; i < mcuHeight * mcuWidth; i++) {
-		YCbCrToRGBMCU(mucs[i]);
+	for (uint y = 0; y < header->mcuHeight; y = y + header->verticalSamplingFactor) {
+		for (uint x = 0; x < header->mcuWidth; x = x + header->horizontalSamplingFactor) {
+			const MCU& cbcr = mucs[y * header->mcuWidthReal + x];
+			//从bottom-right to top-left
+			for (uint v = header->verticalSamplingFactor - 1; v < header->verticalSamplingFactor; v--) {
+				for (uint h = header->horizontalSamplingFactor - 1; h < header->horizontalSamplingFactor; h--) {
+					MCU& mcu = mucs[(y + v) * header->mcuWidthReal + (x + h)];
+					YCbCrToRGBMCU(header, mcu, cbcr, v, h);
+				}
+			}
+		}
 	}
 }
 
