@@ -20,13 +20,12 @@ public:
 //2个字节对齐
 #pragma pack(2)
 typedef struct {
-	unsigned short	bfType;
-	unsigned int	bfSize;
-	unsigned short	bfReserved1;
-	unsigned short	bfReserved2;
-	unsigned int	bfOffBits;
+	unsigned short	bfType = 0x424d;
+	unsigned int	bfSize = 0;
+	unsigned short	bfReserved1 = 0;
+	unsigned short	bfReserved2 = 0;
+	unsigned int	bfOffBits = 0;
 } BitMapFileHeader;
-
 
 typedef struct {
 	unsigned int	biSize;
@@ -42,13 +41,11 @@ typedef struct {
 	unsigned int	biClrImportant;
 } BitMapInfoHeader;
 
-
 typedef struct {
 	unsigned int 	bcSize;
 	unsigned short  bcWidth;
 	unsigned short  bcHeight;
-	unsigned short  bcPlanes;
-	unsigned short  bcBitCount;
+	unsigned short  bcPlanes = 1;
+	unsigned short  bcBitCount = 24;
 } BitMapCoreHeader;
-
 #pragma pack()

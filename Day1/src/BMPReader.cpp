@@ -3,8 +3,8 @@
 #include "BMPReader.h" 
  
 bool BMPReader::open(std::string& path) {
-
 	FILE* file = nullptr;
+
 	if ((file = fopen(path.c_str(), "rb")) == nullptr) {
 		printf("error occured when opening file:%s", path.c_str());
 		return false;
@@ -21,7 +21,6 @@ bool BMPReader::open(std::string& path) {
 		printf("Error - this is not a BMP file that you're reading");
 		return false;
 	}
-
 
 	uint infoHeaderSize;
 	fread(&infoHeaderSize, sizeof(infoHeaderSize), 1, file);
