@@ -3,14 +3,19 @@
 #
 cmake_minimum_required (VERSION 3.8)
 project(Day1)
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+
+add_definitions(-DEXAMPLE_PATH_BMP="${EXAMPLE_PATH_BMP}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -o2 -Wall")
+#set(CMAKE_BUILD_TYPE Debug)
+
 # Add source to this project's executable.
 # lib
-add_library(
+add_executable(
 	Day1
-	JpegEncoder.cpp
+	main.cpp
+	src/BMPReader.cpp
 )
 
-#头文件 header
-target_include_directories(Day1 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-
-# TODO: Add tests and install targets if needed.

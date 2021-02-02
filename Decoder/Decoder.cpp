@@ -1,6 +1,6 @@
 #include <iostream>
 #include <fstream>
-#include <cmath>
+#include <cmath> 
 #include "Jpeg.h"
 class BitReader
 {
@@ -881,9 +881,9 @@ void writeBMP(const Header* const header, const MCU* const mcus, const std::stri
 	}
 
 	//mutiple times of 4 bytes each row,
-	// if width = 1, paddSize = 1
-	// if width = 2, paddingsize = 2
-	// if width = 3, paddingsize = 3
+	// if width = 1, 1 * 3个像素 * 8位 = 24位, 差一个字节, paddingSize = 1
+	// if width = 2, 2 * 3个 * 8位 = 48位  paddingSize = 2
+	// if width = 3, paddingSize = 3
 	// if width = 4, paddingSize = 0
 	const uint paddingSize = header->width % 4;
 
@@ -1062,7 +1062,7 @@ void YCbCrToRGB(const Header* const header, MCU* const mucs) {
 int main() {
 	
 	//jpeg file path
-	const std::string filename(EXAMPLE_PATH);
+	const std::string filename(EXAMPLE_PATH_JPG);
 
 	Header* header = readJPG(filename);
 	if (header == nullptr) {
