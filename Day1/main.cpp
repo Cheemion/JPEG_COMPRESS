@@ -76,6 +76,7 @@ int main() {
             out.put(0);
         }
     }
+    
     out.close();  
       
     return 0;

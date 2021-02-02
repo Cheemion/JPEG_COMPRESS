@@ -11,3 +11,4 @@ set(EXAMPLE_PATH_BMP "${CMAKE_CURRENT_SOURCE_DIR}/resource/lina.bmp")
 # Include sub-projects.
 add_subdirectory ("Decoder")  
 add_subdirectory ("Day1")
+add_subdirectory ("Day2")  
