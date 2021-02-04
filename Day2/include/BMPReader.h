@@ -2,10 +2,10 @@
 #include "common.h"
 #include <string>
 
-class BMP {
+class BMPReader {
 public:
-	BMP() = default;
-	~BMP() {
+	BMPReader() = default;
+	~BMPReader() {
 		if (data) {
 			delete[] data; 
 		}

@@ -1,4 +1,5 @@
 #include "common.h"
+
 void putInt(std::ostream& os, uint value) {
     os.put((value >> 0) & 0xFF); 
     os.put((value >> 8) & 0xFF); 

@@ -8,15 +8,18 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 
 add_definitions(-DEXAMPLE_PATH_BMP="${EXAMPLE_PATH_BMP}")
+add_definitions(-DEXAMPLE_PATH_JPG="${EXAMPLE_PATH_JPG}")
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -o2 -Wall") 
 # set(CMAKE_BUILD_TYPE Debug)
 
 # Add source to this project's executable.
 # lib
-add_executable( 
+add_executable(  
 	Day2
 	main.cpp
-	src/BMP.cpp
-	src/common.cpp
+	src/BMPReader.cpp
+	src/common.cpp 
+	src/JPG.cpp
 )
 

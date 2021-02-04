@@ -1,9 +1,9 @@
 #include <stdio.h> 
-#include "BMP.h"
+#include "BMPReader.h"
 #include "common.h"
 
 
-bool BMP::open(std::string& path) {
+bool BMPReader::open(std::string& path) {
 	FILE* file = nullptr;
 
 	if ((file = fopen(path.c_str(), "rb")) == nullptr) {
