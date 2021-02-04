@@ -9,14 +9,14 @@ int main() {
         std::cout << "Error - canot open file\n" ;
         return 1;
     }
-    JPG jpg(bmpReader.width, bmpReader.height, bmpReader.data, 2, 2, 1, 1, 1, 1) ;
+    JPG jpg(bmpReader.width, bmpReader.height, bmpReader.data, 2, 2, 2, 2, 2, 2) ;
     jpg.convertToYCbCr();
-   // jpg.subsampling();
+    jpg.subsampling();
    // jpg.discreteCosineTransform();
    // jpg.quantization();
    // jpg.huffmanCoding();
    // std::string jpgPath(EXAMPLE_PATH_JPG);
    // jpg.output(jpgPath);
-    
+
     return 0;
 }

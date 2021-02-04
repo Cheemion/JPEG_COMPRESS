@@ -32,8 +32,8 @@ void JPG::subsampling() {
     for (uint i = 0; i < mcuHeight; i++) {
         for (uint j = 0; j < mcuWidth; j++) {
             MCU& currentMCU = data[i * mcuWidth + j];
-            uint rgbHeightOffset = i * maxVerticalSamplingFrequency;
-            uint rgbWidthOffset = j * maxHorizontalSamplingFrequency;
+            uint heightOffset = i * maxVerticalSamplingFrequency * 8;
+            uint widthOffset = j * maxHorizontalSamplingFrequency * 8;
             //iterate over 每一个component Y, cb cr
             for (uint componentID = 1; componentID <= 3; componentID++) {
                 //mcu有多少行个block
@@ -41,16 +41,17 @@ void JPG::subsampling() {
                 //mcu有多少列个block
                 uint blockColumnNum = getVerticalSamplingFrequency(componentID);
                 //遍历block
-                for(uint ii = 0; ii < blockRowNum; i++, rgbHeightOffset+=8) {
-                    for(uint jj = 0; jj < blockColumnNum; j++, rgbWidthOffset+=8) {
+                for(uint ii = 0; ii < blockRowNum; ii++, heightOffset+=8) {
+                    for(uint jj = 0; jj < blockColumnNum; jj++, widthOffset+=8) {
 
                         Block& currentBlock = currentMCU[componentID][ii * blockColumnNum + jj];
-                        //遍历像素
+                        //遍历Block every pixels 像素
                         for(uint y = 0; y < 8; y++) {
                             for(uint x = 0; x < 8; x++) {
-                                uint rgbY = rgbHeightOffset + y * getVerticalSamplingFrequency(componentID) / maxVerticalSamplingFrequency;
-                                uint rgbX = rgbWidthOffset + x * getHorizontalSamplingFrequency(componentID) / maxHorizontalSamplingFrequency;
-                                currentBlock[y * 8 + x];
+                                uint sampledY = heightOffset + y *  maxVerticalSamplingFrequency / getVerticalSamplingFrequency(componentID);
+                                uint sampledX = widthOffset + x * maxHorizontalSamplingFrequency / getHorizontalSamplingFrequency(componentID);
+                                if(sampledY * width + sampledX >= width * height) break;
+                                currentBlock[y * 8 + x] = BMPData[sampledY * width + sampledX][componentID];
                             }
                         }
                     }

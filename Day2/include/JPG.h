@@ -36,6 +36,16 @@ struct YCbCr {
         double Cr;
         double blue;
     };
+
+    double operator[] (uint ID) {
+        switch (ID) {
+        case 1: return Y;
+        case 2: return Cb;
+        case 3: return Cr;
+        default:
+            throw std::runtime_error("Error - no such ID");
+        }
+    }
 };
 
 class JPG
