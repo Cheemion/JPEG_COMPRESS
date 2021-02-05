@@ -2,7 +2,7 @@
 #include "BMPReader.h"
 #include "common.h"
 #include <algorithm>
-using Block = int[64];
+using Block = double[64];
 
 struct MCU {
     Block* y;

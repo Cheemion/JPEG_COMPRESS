@@ -32,12 +32,12 @@ int main() {
     std::cout << "start" << std::endl;
     std::string path(RESOURCE_PATH);
     path = path + "example.bmp";
-    BMPReader bmpReader;
+    BMPReader bmpReader; 
     if(!bmpReader.open(path)) {
         std::cout << "Error - canot open file\n" ;
         return 1;
     }
-    JPG jpg(bmpReader.width, bmpReader.height, bmpReader.data, 2, 2, 1, 2, 2, 1) ;
+    JPG jpg(bmpReader.width, bmpReader.height, bmpReader.data, 2, 2, 1, 1, 1, 1) ;
     jpg.convertToYCbCr();
     jpg.subsampling();
     jpg.discreteCosineTransform();
