@@ -36,22 +36,21 @@ void JPG::subsampling() {
             uint widthOffset = j * maxHorizontalSamplingFrequency * 8;
             //iterate over 每一个component Y, cb cr
             for (uint componentID = 1; componentID <= 3; componentID++) {
-                //mcu有多少行个block
-                uint blockRowNum = getHorizontalSamplingFrequency(componentID);
-                //mcu有多少列个block
-                uint blockColumnNum = getVerticalSamplingFrequency(componentID);
                 //遍历block
-                for(uint ii = 0; ii < blockRowNum; ii++, heightOffset+=8) {
-                    for(uint jj = 0; jj < blockColumnNum; jj++, widthOffset+=8) {
-
-                        Block& currentBlock = currentMCU[componentID][ii * blockColumnNum + jj];
+                for(uint ii = 0, yOffSet = heightOffset; ii < getVerticalSamplingFrequency(componentID); ii++, yOffSet = yOffSet + 8) {
+                    for(uint jj = 0, xOffset = widthOffset; jj < getHorizontalSamplingFrequency(componentID); jj++, xOffset = xOffset + 8) {
+                        Block& currentBlock = currentMCU[componentID][ii * getHorizontalSamplingFrequency(componentID) + jj];
                         //遍历Block every pixels 像素
                         for(uint y = 0; y < 8; y++) {
                             for(uint x = 0; x < 8; x++) {
-                                uint sampledY = heightOffset + y *  maxVerticalSamplingFrequency / getVerticalSamplingFrequency(componentID);
-                                uint sampledX = widthOffset + x * maxHorizontalSamplingFrequency / getHorizontalSamplingFrequency(componentID);
-                                if(sampledY * width + sampledX >= width * height) break;
-                                currentBlock[y * 8 + x] = BMPData[sampledY * width + sampledX][componentID];
+                                uint sampledY = yOffSet + y *  maxVerticalSamplingFrequency / getVerticalSamplingFrequency(componentID);
+                                uint sampledX = xOffset + x * maxHorizontalSamplingFrequency / getHorizontalSamplingFrequency(componentID);
+                                //cannot find in original pictures;
+                                if(sampledX >= width || sampledY >= height) {
+                                    currentBlock[y * 8 + x] = 0;
+                                } else {
+                                    currentBlock[y * 8 + x] = BMPData[sampledY * width + sampledX][componentID];
+                                }
                             }
                         }
                     }

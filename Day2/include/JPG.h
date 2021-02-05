@@ -57,7 +57,7 @@ public:
     void quantization();
     void huffmanCoding();
     void output(std::string path);
-private:
+public:
     MCU* data;
     Block* blocks;
     YCbCr* BMPData;
@@ -86,7 +86,7 @@ private:
     byte maxVerticalSamplingFrequency;
     byte maxHorizontalSamplingFrequency;
 public:
-    uint getVerticalSamplingFrequency(uint ID) {
+    uint getVerticalSamplingFrequency(uint ID) const{
         if(ID == 1) {
             return YVerticalSamplingFrequency;
         } else if(ID == 2) {
@@ -96,7 +96,7 @@ public:
         } else 
             throw std::runtime_error("Error - Block ID not existed:" + ID);
     }
-    uint getHorizontalSamplingFrequency(uint ID) {
+    uint getHorizontalSamplingFrequency(uint ID) const{
         if(ID == 1) {
             return YHorizontalSamplingFrequency;
         } else if(ID == 2) {
@@ -107,7 +107,7 @@ public:
             throw std::runtime_error("Error - Block ID not existed:" + ID);
     }
     
-    JPG(uint width, uint height,RGB* const rgbs,
+    JPG(uint width, uint height,const RGB* const rgbs,
         byte YVerticalSamplingFrequency, byte YHorizontalSamplingFrequency, 
         byte CbVerticalSamplingFrequency, byte CbHorizontalSamplingFrequency,
         byte CrVerticalSamplingFrequency, byte CrHorizontalSamplingFrequency
@@ -156,4 +156,5 @@ public:
         delete[] blocks;
         delete[] BMPData;
     }
+
 };
