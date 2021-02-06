@@ -2,7 +2,7 @@
 #include "BMPReader.h"
 #include "common.h"
 #include <algorithm>
-using Block = double[64];
+using Block = int[64];
 
 struct MCU {
     Block* y;
@@ -24,17 +24,17 @@ struct MCU {
 struct YCbCr {
     union
     {
-        double Y;
-        double red;
+        int Y;
+        int red;
     };
     union 
     {
-        double Cb;
-        double green;
+        int Cb;
+        int green;
     };
     union {
-        double Cr;
-        double blue;
+        int Cr;
+        int blue;
     };
 
     double operator[] (uint ID) {
@@ -145,9 +145,9 @@ public:
             BMPData = new YCbCr[width * height];
             for(uint i = 0; i < height; i++) {
                 for(uint j = 0; j < width; j++) {
-                    BMPData[i * width + j].red = static_cast<double>(rgbs[i * width + j].red);
-                    BMPData[i * width + j].blue = static_cast<double>(rgbs[i * width + j].blue);
-                    BMPData[i * width + j].green = static_cast<double>(rgbs[i * width + j].green);
+                    BMPData[i * width + j].red = static_cast<int>(rgbs[i * width + j].red);
+                    BMPData[i * width + j].blue = static_cast<int>(rgbs[i * width + j].blue);
+                    BMPData[i * width + j].green = static_cast<int>(rgbs[i * width + j].green);
                 }
             }  
         }
