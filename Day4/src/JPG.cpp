@@ -2,6 +2,9 @@
 #include "common.h"
 #include <cstring>
 #include <cmath>
+
+
+
 void JPG::convertToYCbCr() {
     for(uint i = 0; i < height; i++) {
         for(uint j = 0; j < width; j++) {
@@ -101,10 +104,8 @@ void JPG::discreteCosineTransform() {
                         Block& currentBlock = currentMCU[componentID][ii * getHorizontalSamplingFrequency(componentID) + jj];
                         //遍历Block every pixels 像素
                         //在进行DCT变化之前把0~255变化到-128~127
-                        for(uint y = 0; y < 8; y++) {
-                            for(uint x = 0; x < 8; x++) {
-                                currentBlock[y * 8 + x] = currentBlock[y * 8 + x] - 128;
-                            }
+                        for(uint index = 0; index < 64; index++) {
+                            currentBlock[index] = currentBlock[index] - 128;
                         }
                         DCT(currentBlock); 
                     }
@@ -115,7 +116,25 @@ void JPG::discreteCosineTransform() {
 }
 
 void JPG::quantization() {
+    for (uint i = 0; i < mcuHeight; i++) {
+        for (uint j = 0; j < mcuWidth; j++) {
+            MCU& currentMCU = data[i * mcuWidth + j];
+            //iterate over 每一个component Y, cb cr
+            for (uint componentID = 1; componentID <= 3; componentID++) {
+                //遍历block
+                for(uint ii = 0; ii < getVerticalSamplingFrequency(componentID); ii++) {
+                    for(uint jj = 0; jj < getHorizontalSamplingFrequency(componentID); jj++) {
+                        Block& currentBlock = currentMCU[componentID][ii * getHorizontalSamplingFrequency(componentID) + jj];
+                        const Block& quantizationTable = getQuantizationTableByID(componentID);
 
+                        for(uint index = 0; index < 64; index++) {
+                             currentBlock[index] = currentBlock[index] / quantizationTable[index];
+                        }
+                    }
+                }             
+            }
+        }
+    }  
 }
 void JPG::huffmanCoding() {
 

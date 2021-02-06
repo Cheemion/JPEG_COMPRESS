@@ -7,6 +7,7 @@ struct RGB {
 	byte green;
 	byte red;
 };
+using Block = int[64];
 
 //little-endian 输出
 void putInt(std::ostream& os, uint value);

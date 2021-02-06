@@ -38,10 +38,10 @@ int main() {
         return 1;
     }
     JPG jpg(bmpReader.width, bmpReader.height, bmpReader.data, 2, 2, 1, 1, 1, 1) ;
-    //jpg.convertToYCbCr();
+    jpg.convertToYCbCr();
     jpg.subsampling();
     jpg.discreteCosineTransform();
-    //jpg.quantization();
+    jpg.quantization();
     //jpg.huffmanCoding();
     //std::string jpgPath(EXAMPLE_PATH_JPG);
     //jpg.output(jpgPath);
