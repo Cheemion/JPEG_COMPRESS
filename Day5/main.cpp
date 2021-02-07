@@ -42,7 +42,7 @@ int main() {
     jpg.subsampling();
     jpg.discreteCosineTransform();
     jpg.quantization();
-    //jpg.huffmanCoding();
+    jpg.huffmanCoding();
     //std::string jpgPath(EXAMPLE_PATH_JPG);
     //jpg.output(jpgPath);
     printJPG(jpg);

@@ -3,8 +3,6 @@
 #include <cstring>
 #include <cmath>
 
-
-
 void JPG::convertToYCbCr() {
     for(uint i = 0; i < height; i++) {
         for(uint j = 0; j < width; j++) {
@@ -136,9 +134,46 @@ void JPG::quantization() {
         }
     }  
 }
-void JPG::huffmanCoding() {
 
+//从0->0 | (-1,1) -> 1 | (2,3,-3,-2) -> 2
+byte getBinaryLengthByValue(int value) {
+    value = value < 0 ? (-value) : value;
+    byte result = 0;
+    while(value != 0) {
+        value = value >> 1;
+        result = result + 1;
+    }
+    return result;    
 }
+
+void JPG::huffmanCoding() {
+    //先创建Table
+    //Y
+    uint componentID = 1;
+    int lastYDC = 0;
+    yDC.identifer = 0;
+    //创建YDC_Table
+    for (uint i = 0; i < mcuHeight; i++) {
+        for (uint j = 0; j < mcuWidth; j++) {
+            MCU& currentMCU = data[i * mcuWidth + j];
+            //iterate over 每一个component Y, cb cr
+            //遍历block
+            for(uint ii = 0; ii < getVerticalSamplingFrequency(componentID); ii++) {
+                for(uint jj = 0; jj < getHorizontalSamplingFrequency(componentID); jj++) {
+                    Block& currentBlock = currentMCU[componentID][ii * getHorizontalSamplingFrequency(componentID) + jj];
+                    int difference = currentBlock[0] - lastYDC; //DC分量是encode difference
+                    lastYDC = currentBlock[0];
+                    byte symbol = getBinaryLengthByValue(difference); //Y的2进制的长度就是symbol的值
+                    yDC.countOfSymbol[symbol]++;
+                }
+            }
+            yDC.countOfSymbol[0xFF]++; // FF是一个不会出现的symbol,作为我们的dummy symbol 防止one bit stream 的出现  比如11111, 这样就可以防止compressdata中出现FF的可能,             
+        }
+    }
+    
+}
+
+
 void JPG::output(std::string path) {
 
 }
