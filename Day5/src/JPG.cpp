@@ -154,12 +154,22 @@ byte getBinaryLengthByValue(int value) {
     return result;    
 }
 
+
+bool isRemainingAllZero(const Block& block, uint startIndex) {
+    bool isAllZero = true; //judge if all other pixels that follow are zero
+    for(uint j = startIndex; j < 64; j++) {
+        if(block[ZIG_ZAG[j]] != 0) {
+            isAllZero = false;
+            break;
+        }
+    }
+    return isAllZero;
+}
+
 void JPG::huffmanCoding() {
-    //先创建Table
-    //Y
-    uint componentID = 1;
+    /*****************************************创建yDC_Table*********************************************/
     int lastYDC = 0;
-    yDC.identifer = 0;
+    uint componentID = 1;
     //创建YDC_Table
     for (uint i = 0; i < mcuHeight; i++) {
         for (uint j = 0; j < mcuWidth; j++) {
@@ -177,7 +187,102 @@ void JPG::huffmanCoding() {
             }
         }
     }
-    yDC.generateHuffmanCode();             
+    yDC.generateHuffmanCode(); 
+     /*****************************************创建 yAC_Table*********************************************/
+    for (uint i = 0; i < mcuHeight; i++) {
+        for (uint j = 0; j < mcuWidth; j++) {
+            MCU& currentMCU = data[i * mcuWidth + j];
+            //遍历block
+            for(uint ii = 0; ii < getVerticalSamplingFrequency(componentID); ii++) {
+                for(uint jj = 0; jj < getHorizontalSamplingFrequency(componentID); jj++) {
+                    Block& currentBlock = currentMCU[componentID][ii * getHorizontalSamplingFrequency(componentID) + jj];
+                    uint numZero = 0;
+                    for(uint k = 1; k < 64; k++) {
+                        if(currentBlock[ZIG_ZAG[k]] == 0) {
+                            numZero++;
+                            if(numZero == 16) {
+                                if(isRemainingAllZero(currentBlock, k + 1)) {
+                                    yAC.countOfSymbol[0x00]++;
+                                    break;
+                                } else {
+                                    yAC.countOfSymbol[0xF0]++;//16个0
+                                    numZero = 0;
+                                }
+                            }
+                        } else {
+                            byte lengthOfCoefficient = getBinaryLengthByValue(currentBlock[ZIG_ZAG[k]]);
+                            byte symbol = (numZero << 4) + lengthOfCoefficient;
+                            yAC.countOfSymbol[symbol]++;
+                            numZero = 0;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    yAC.generateHuffmanCode();
+    /*****************************************创建chromaDC_Table*********************************************/
+
+    int lastChromaDC = 0;
+    for(uint componentID = 2; componentID <=3; componentID++) {
+        for (uint i = 0; i < mcuHeight; i++) {
+            for (uint j = 0; j < mcuWidth; j++) {
+                MCU& currentMCU = data[i * mcuWidth + j];
+                //iterate over 每一个component Y, cb cr
+                //遍历block
+                for(uint ii = 0; ii < getVerticalSamplingFrequency(componentID); ii++) {
+                    for(uint jj = 0; jj < getHorizontalSamplingFrequency(componentID); jj++) {
+                        Block& currentBlock = currentMCU[componentID][ii * getHorizontalSamplingFrequency(componentID) + jj];
+                        int difference = currentBlock[0] - lastChromaDC; //DC分量是encode difference
+                        lastChromaDC = currentBlock[0];
+                        byte symbol = getBinaryLengthByValue(difference); //Y的2进制的长度就是symbol的值
+                        chromaDC.countOfSymbol[symbol]++;
+                    }
+                }
+            }
+        }
+    }
+    chromaDC.generateHuffmanCode();
+    /*****************************************创建chromaAC_Table*********************************************/
+    for(uint componentID = 2; componentID <=3; componentID++) {
+        for (uint i = 0; i < mcuHeight; i++) {
+            for (uint j = 0; j < mcuWidth; j++) {
+                MCU& currentMCU = data[i * mcuWidth + j];
+                //遍历block
+                for(uint ii = 0; ii < getVerticalSamplingFrequency(componentID); ii++) {
+                    for(uint jj = 0; jj < getHorizontalSamplingFrequency(componentID); jj++) {
+                        Block& currentBlock = currentMCU[componentID][ii * getHorizontalSamplingFrequency(componentID) + jj];
+                        uint numZero = 0;
+                        for(uint k = 1; k < 64; k++) {
+                            if(currentBlock[ZIG_ZAG[k]] == 0) {
+                                numZero++;
+                                if(numZero == 16) {
+                                    if(isRemainingAllZero(currentBlock, k + 1)) {
+                                        chromaAC.countOfSymbol[0x00]++;
+                                        break;
+                                    } else {
+                                        chromaAC.countOfSymbol[0xF0]++;//16个0
+                                        numZero = 0;
+                                    }
+                                }
+                            } else {
+                                byte lengthOfCoefficient = getBinaryLengthByValue(currentBlock[ZIG_ZAG[k]]);
+                                byte symbol = (numZero << 4) + lengthOfCoefficient;
+                                chromaAC.countOfSymbol[symbol]++;
+                                numZero = 0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    chromaAC.generateHuffmanCode();
+
+
+
+    
+
 }
 
 

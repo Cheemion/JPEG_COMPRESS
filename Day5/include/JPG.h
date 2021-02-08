@@ -107,7 +107,6 @@ struct LinkedSymbol {
 
 class HuffmanTable {
 public:
-	byte identifer;
     std::vector<Symbol> sortedSymbol;
 
     //没有256个但是为了实现的方便,256个Symbol出现的次数
@@ -296,7 +295,21 @@ public:
 public:
     static const Block& getQuantizationTableByID(uint componentID);
 
-    
+    HuffmanTable& getHuffmanTable(uint identifier, uint componentID) {
+        if(identifier == 0) { //DC
+            if(componentID == 1) {//Y
+                return yDC;
+            } else {
+                return chromaDC;
+            }
+        } else { //AC
+            if(componentID == 1) {//Y
+                return yAC;
+            } else {
+                return chromaAC;
+            }
+        }
+    }
     uint getVerticalSamplingFrequency(uint ID) const{
         if(ID == 1) {
             return YVerticalSamplingFrequency;

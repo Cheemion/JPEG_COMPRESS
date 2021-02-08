@@ -29,6 +29,7 @@ void printJPG(const JPG& jpg) {
 
 
 int main() {
+    /*
     HuffmanTable h;
     h.countOfSymbol['A'] = 10;
     h.countOfSymbol['C'] = 1;
@@ -39,8 +40,7 @@ int main() {
     h.countOfSymbol[' '] = 6; 
     h.countOfSymbol['.'] = 1;
     h.generateHuffmanCode();
-    /*
-    
+    */
     std::cout << "start" << std::endl;
     std::string path(RESOURCE_PATH);
     path = path + "example.bmp";
@@ -56,7 +56,6 @@ int main() {
     jpg.quantization();
     jpg.huffmanCoding();
     
-    */
     //std::string jpgPath(EXAMPLE_PATH_JPG);
     //jpg.output(jpgPath);
    // printJPG(jpg);
