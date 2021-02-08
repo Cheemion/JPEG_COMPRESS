@@ -115,7 +115,7 @@ public:
 	byte codeCountOfLength[33] = { 0 };
 
     uint codeOfSymbol[256] = { 0 };
-
+    uint codeLengthOfSymbol[256] = { 0 };
     //可以使用二叉树结构来生成哈夫曼
     //这边使用了书<Compressed Image File Formats JPEG, PNG, GIF, XBM, BMP - John Miano>66页中的实现方法
     // could use binary tree structure to generate hufman code for these symbols but for simpicility just use the method from book Compressed Image Files blablabla
@@ -235,15 +235,15 @@ public:
         uint currentLength = 1;
         for (auto it = sortedSymbol.begin(); it != sortedSymbol.end(); it++) {
             if(currentLength == it->codeLength) {
-                codeOfSymbol[it->symbol] = huffmanCode++;
-                it->code = codeOfSymbol[it->symbol];
+                it->code = huffmanCode++;
+                codeOfSymbol[it->symbol] = it->code;
+                codeLengthOfSymbol[it->symbol] = it->codeLength;
             } else {
                 huffmanCode = huffmanCode << 1;
                 currentLength++;
                 it--;
             }
         }
-        
     }
 };
 
