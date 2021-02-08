@@ -2,8 +2,7 @@
 #include "BMPReader.h"
 #include "common.h"
 #include <algorithm>
-#include <vector> 
-
+#include <vector>
 const byte ZIG_ZAG[64] =
 {
 	0,   1,  8, 16, 9,  2,  3, 10,
@@ -89,7 +88,8 @@ struct Symbol {
     uint weight;
     uint codeLength;
     Symbol* nextSymbol;
-    uint code = 0x1111111111111111;
+    unsigned short code;
+    Symbol() = default;
     Symbol(byte symbol, uint weight, uint codeLength, Symbol* nextSymbol) {
         this->symbol = symbol;
         this->weight = weight;
@@ -102,7 +102,6 @@ struct LinkedSymbol {
     uint weight;
     Symbol* symbol;
 };
-
 
 
 
@@ -134,7 +133,9 @@ public:
             symbols.erase(symbols.begin() + index);
             return minWeight;
     }
+
     static bool comp(const Symbol& a, const Symbol& b) {
+        if(b.symbol == 0xFF) return true; //dummy symbol 永远在底部
         return a.codeLength < b.codeLength;
     }
     void generateHuffmanCode() {
@@ -149,24 +150,38 @@ public:
             linkedSymbol.weight = s->weight;
             symbols.push_back(linkedSymbol);
         }
+        
+        
+        // FF是一个不会出现的symbol,作为我们的dummy symbol 防止one bit stream 的出现  比如11111, 这样就可以防止compressdata中出现FF的可能
+        Symbol* dummySymbol = new Symbol(0xFF, 1, 0, nullptr); 
+        LinkedSymbol dymmyLinkedSymbol;
+        dymmyLinkedSymbol.symbol = dummySymbol;
+        dymmyLinkedSymbol.weight = dummySymbol->weight;
+        symbols.push_back(dymmyLinkedSymbol);
+        
+        
+
         //合并的过程
         while(symbols.size() != 1) {
+            
             //leastWeight
-            auto least = getLeastWeightLinkedSymbol(symbols);
+            LinkedSymbol least = getLeastWeightLinkedSymbol(symbols);
             //second Least Weight
-            auto secondLeast = getLeastWeightLinkedSymbol(symbols);
+            LinkedSymbol second = getLeastWeightLinkedSymbol(symbols);
             //add two weights
-            secondLeast.weight = secondLeast.weight + least.weight;
+            least.weight = least.weight + second.weight;
+
             //linked two linkedsymbols;
-            Symbol* temp = secondLeast.symbol;
+            Symbol* temp = second.symbol;
             while(temp->nextSymbol != nullptr)
                 temp = temp->nextSymbol;
             temp->nextSymbol = least.symbol;
+            least.symbol = second.symbol;
             //把每个symbol加1 codeLength,并且加入到 
-            for(auto i = secondLeast.symbol; i != nullptr; i = i->nextSymbol) {
+            for(auto i = least.symbol; i != nullptr; i = i->nextSymbol) {
                 i->codeLength++;
             }
-            symbols.push_back(secondLeast);
+            symbols.push_back(least);
         }
 
         //放入sortedSymbols
@@ -174,6 +189,7 @@ public:
             sortedSymbol.push_back(*i);
         }
 
+        //排序,并且把dummy symbol 放在最后面;
         std::sort(sortedSymbol.begin(), sortedSymbol.end(), comp);
 
         //释放内存
@@ -203,7 +219,6 @@ public:
             }
         }
 
-
         uint index = 1; //codeLength赋值回去
         for (auto it = sortedSymbol.begin(); it != sortedSymbol.end(); it++) {
             if(codeCountOfLength[index] != 0) {
@@ -215,18 +230,21 @@ public:
             }
         }
 
+        
         //生成huffmanCode for each symbol
         uint huffmanCode = 0;
         uint currentLength = 1;
-        for (auto it = sortedSymbol.cbegin(); it != sortedSymbol.cend(); it++) {
+        for (auto it = sortedSymbol.begin(); it != sortedSymbol.end(); it++) {
             if(currentLength == it->codeLength) {
                 codeOfSymbol[it->symbol] = huffmanCode++;
                 it->code = codeOfSymbol[it->symbol];
             } else {
+                huffmanCode = huffmanCode << 1;
                 currentLength++;
-                huffmanCode << 1;
+                it--;
             }
         }
+        
     }
 };
 

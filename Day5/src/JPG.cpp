@@ -175,11 +175,9 @@ void JPG::huffmanCoding() {
                     yDC.countOfSymbol[symbol]++;
                 }
             }
-            yDC.countOfSymbol[0xFF]++; // FF是一个不会出现的symbol,作为我们的dummy symbol 防止one bit stream 的出现  比如11111, 这样就可以防止compressdata中出现FF的可能,
         }
     }
     yDC.generateHuffmanCode();             
-    
 }
 
 
