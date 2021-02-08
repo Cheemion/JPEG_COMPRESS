@@ -166,6 +166,7 @@ bool isRemainingAllZero(const Block& block, uint startIndex) {
     return isAllZero;
 }
 
+
 void JPG::huffmanCoding() {
     /*****************************************创建yDC_Table*********************************************/
     int lastYDC = 0;
@@ -278,10 +279,6 @@ void JPG::huffmanCoding() {
         }
     }
     chromaAC.generateHuffmanCode();
-
-
-
-    
 
 }
 
