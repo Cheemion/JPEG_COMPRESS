@@ -7,7 +7,7 @@ project(Day5)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include) 
 add_definitions(-DRESOURCE_PATH="${RESOURCE_PATH}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -o2 -Wall") 
-# set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Debug)
 # Add source to this project's executable.
 add_executable(  
 	Day5

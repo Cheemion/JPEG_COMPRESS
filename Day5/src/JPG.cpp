@@ -2,6 +2,14 @@
 #include "common.h"
 #include <cstring>
 #include <cmath>
+#include <vector>
+
+const Block& JPG::getQuantizationTableByID(uint componentID) {
+    if(componentID == 1)
+        return QUANTIZATION_TABLE_Y;
+    else
+        return QUANTIZATION_TABLE_CBCR;
+}
 
 void JPG::convertToYCbCr() {
     for(uint i = 0; i < height; i++) {
@@ -123,7 +131,7 @@ void JPG::quantization() {
                 for(uint ii = 0; ii < getVerticalSamplingFrequency(componentID); ii++) {
                     for(uint jj = 0; jj < getHorizontalSamplingFrequency(componentID); jj++) {
                         Block& currentBlock = currentMCU[componentID][ii * getHorizontalSamplingFrequency(componentID) + jj];
-                        const Block& quantizationTable = getQuantizationTableByID(componentID);
+                        const Block& quantizationTable = JPG::getQuantizationTableByID(componentID);
 
                         for(uint index = 0; index < 64; index++) {
                              currentBlock[index] = currentBlock[index] / quantizationTable[index];
@@ -167,9 +175,10 @@ void JPG::huffmanCoding() {
                     yDC.countOfSymbol[symbol]++;
                 }
             }
-            yDC.countOfSymbol[0xFF]++; // FF是一个不会出现的symbol,作为我们的dummy symbol 防止one bit stream 的出现  比如11111, 这样就可以防止compressdata中出现FF的可能,             
+            yDC.countOfSymbol[0xFF]++; // FF是一个不会出现的symbol,作为我们的dummy symbol 防止one bit stream 的出现  比如11111, 这样就可以防止compressdata中出现FF的可能,
         }
     }
+    yDC.generateHuffmanCode();             
     
 }
 

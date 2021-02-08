@@ -2,7 +2,7 @@
 #include "BMPReader.h"
 #include "common.h"
 #include <algorithm>
-
+#include <vector> 
 
 const byte ZIG_ZAG[64] =
 {
@@ -84,27 +84,33 @@ struct YCbCr {
         }
     }
 };
+struct Symbol {
+    byte symbol;
+    uint weight;
+    uint codeLength;
+    Symbol* nextSymbol;
+    Symbol(byte symbol, uint weight, uint codeLength, Symbol* nextSymbol) {
+        this->symbol = symbol;
+        this->weight = weight;
+        this->codeLength = codeLength;
+        this->nextSymbol = nextSymbol;
+    }
+};
+
+struct LinkedSymbol {
+    uint weight;
+    Symbol* symbol;
+};
 
 class HuffmanTable {
-    struct Symbol {
-        byte symbol;
-        uint weight;
-        uint codeLength;
-        Symbol* nextSymbol = nullptr;
-    };
-
-    struct LinkedSymbol {
-        uint weight;
-        Symbol* symbol;
-    };
-
+public:
 	byte identifer;
     std::vector<Symbol> sortedSymbol;
 
     //没有256个但是为了实现的方便,256个Symbol出现的次数
     uint countOfSymbol[256] = { 0 };
-    //长度为i的code要多少个
-	byte codeCountOfLength[16] = { 0 };
+    //长度为i的code有多少个,去除0,这里保持了1到32位的code的个数
+	byte codeCountOfLength[33] = { 0 };
 
     uint codeOfSymbol[256] = { 0 };
 
@@ -113,31 +119,31 @@ class HuffmanTable {
     // could use binary tree structure to generate hufman code for these symbols but for simpicility just use the method from book Compressed Image Files blablabla
 
     LinkedSymbol getLeastWeightLinkedSymbol(std::vector<LinkedSymbol>& symbols) {
-            decltype(symbols.begin()) index = (symbols.end() - 1);
-            auto minWeight = (symbols.end() - 1) -> weight;
+            std::vector<LinkedSymbol>::size_type index = symbols.size() - 1;
+            auto minWeight = symbols[index];
             //从底部开始循环
-            for(auto it = symbols.end(); it != symbols.begin(); it--) {
-                if(it->weight > minWeight) continue;
-                minWeight = it->weight;
-                index = it;
+            for(auto i = symbols.size() - 1; i < symbols.size(); i--) {
+                if(symbols[i].weight >= minWeight.weight) continue;
+                minWeight = symbols[i];
+                index = i;
             }
-            auto leastWeighted = symbols.erase(index);
-            return *leastWeighted;
+            symbols.erase(symbols.begin() + index);
+            return minWeight;
     }
 
     void generateHuffmanCode() {
         std::vector<LinkedSymbol> symbols;
         //遍历每个出现的symbol， add to vectors
-        for(byte symbol = 0; symbol < 256; symbol++) {
+        for(uint symbol = 0; symbol < 256; symbol++) {
             if(countOfSymbol[symbol] == 0) 
                 continue;
-            Symbol* s = new Symbol{symbol, countOfSymbol[symbol], 0, nullptr};
+            Symbol* s = new Symbol(symbol, countOfSymbol[symbol], 0, nullptr);
             LinkedSymbol linkedSymbol;
             linkedSymbol.symbol = s;
             linkedSymbol.weight = s->weight;
             symbols.push_back(linkedSymbol);
         }
-
+        std::cout << "here";
         //合并的过程
         while(symbols.size() != 1) {
             //leastWeight
@@ -155,12 +161,16 @@ class HuffmanTable {
             for(auto i = secondLeast.symbol; i != nullptr; i = i->nextSymbol) {
                 i->codeLength++;
             }
+            symbols.push_back(secondLeast);
         }
+        std::cout << "here";
+
         //放入sortedSymbols
         for(Symbol* i = symbols[0].symbol; i != nullptr; i = i->nextSymbol) {
             sortedSymbol.push_back(*i);
         }
-        
+                std::cout << "here";
+
         //释放内存
         Symbol* temp = symbols[0].symbol;
         while(temp != nullptr) {
@@ -168,22 +178,39 @@ class HuffmanTable {
             delete temp;
             temp = t;
         }
-        
+                std::cout << "here";
+
         //长度为n的code的个数
         //生成codeLengthCount for each codeLength;
         for (auto it = sortedSymbol.cbegin(); it != sortedSymbol.cend(); it++) {
             codeCountOfLength[it->codeLength]++;
         }
+        std::cout << "here";
 
-        //规定codeLength不能大于16, 找到最大的codeLengtth
-        while(sortedSymbol[sortedSymbol.size() - 1].codeLength > 16) {
-            //找到小2的code,
-            uint codeLengthTarget = sortedSymbol[sortedSymbol.size() - 1].codeLength - 2;
-            for(auto i = sortedSymbol.size() - 1; i > 0; i--) {
-
+        //规定codeLength不能大于16, 套用书上的方法实现了一下
+        for(uint ii = 32; ii >= 17; ii--) {
+            while(codeCountOfLength[ii] != 0) {
+                uint jj = ii - 2;
+                while(codeCountOfLength[jj] == 0)
+                    jj--;
+                codeCountOfLength[ii] = codeCountOfLength[ii] - 2;
+                codeCountOfLength[ii - 1] = codeCountOfLength[ii - 1] + 1;
+                codeCountOfLength[jj + 1] = codeCountOfLength[jj + 1] + 2;
+                codeCountOfLength[jj] = codeCountOfLength[jj] - 1;
             }
         }
 
+
+        uint index = 1; //
+        for (auto it = sortedSymbol.begin(); it != sortedSymbol.end(); it++) {
+            if(codeCountOfLength[index] != 0) {
+                it->codeLength = index;
+                codeCountOfLength[index]--;
+            } else {
+                index++;
+                it--;
+            }
+        }
 
         //生成huffmanCode for each symbol
         uint huffmanCode = 0;
@@ -196,7 +223,6 @@ class HuffmanTable {
                 huffmanCode << 1;
             }
         }
-
     }
 };
 
@@ -213,7 +239,7 @@ public:
     HuffmanTable yDC;
     HuffmanTable yAC;
     HuffmanTable chromaDC;
-    HuffmanTable chromaDC;
+    HuffmanTable chromaAC;
 
     MCU* data;
     Block* blocks;
@@ -246,13 +272,8 @@ public:
     std::vector<byte> huffmanData;
 
 public:
+    static const Block& getQuantizationTableByID(uint componentID);
 
-    static const Block& getQuantizationTableByID(uint componentID) {
-        if(componentID == 1)
-            return QUANTIZATION_TABLE_Y;
-        else
-            return QUANTIZATION_TABLE_CBCR;
-    }
     
     uint getVerticalSamplingFrequency(uint ID) const{
         if(ID == 1) {

@@ -29,6 +29,18 @@ void printJPG(const JPG& jpg) {
 
 
 int main() {
+    HuffmanTable h;
+    h.countOfSymbol['A'] = 10;
+    h.countOfSymbol['C'] = 1;
+    h.countOfSymbol['L'] = 2;
+    h.countOfSymbol['M'] = 2;
+    h.countOfSymbol['N'] = 4;
+    h.countOfSymbol['P'] = 2;
+    h.countOfSymbol[' '] = 6; 
+    h.countOfSymbol['.'] = 1;
+    h.generateHuffmanCode();
+    /*
+    
     std::cout << "start" << std::endl;
     std::string path(RESOURCE_PATH);
     path = path + "example.bmp";
@@ -43,9 +55,11 @@ int main() {
     jpg.discreteCosineTransform();
     jpg.quantization();
     jpg.huffmanCoding();
+    
+    */
     //std::string jpgPath(EXAMPLE_PATH_JPG);
     //jpg.output(jpgPath);
-    printJPG(jpg);
+   // printJPG(jpg);
     std::cout << "end" << std::endl;
     return 0;
     
