@@ -89,6 +89,7 @@ struct Symbol {
     uint weight;
     uint codeLength;
     Symbol* nextSymbol;
+    uint code = 0x1111111111111111;
     Symbol(byte symbol, uint weight, uint codeLength, Symbol* nextSymbol) {
         this->symbol = symbol;
         this->weight = weight;
@@ -101,6 +102,9 @@ struct LinkedSymbol {
     uint weight;
     Symbol* symbol;
 };
+
+
+
 
 class HuffmanTable {
 public:
@@ -130,7 +134,9 @@ public:
             symbols.erase(symbols.begin() + index);
             return minWeight;
     }
-
+    static bool comp(const Symbol& a, const Symbol& b) {
+        return a.codeLength < b.codeLength;
+    }
     void generateHuffmanCode() {
         std::vector<LinkedSymbol> symbols;
         //遍历每个出现的symbol， add to vectors
@@ -143,7 +149,6 @@ public:
             linkedSymbol.weight = s->weight;
             symbols.push_back(linkedSymbol);
         }
-        std::cout << "here";
         //合并的过程
         while(symbols.size() != 1) {
             //leastWeight
@@ -163,13 +168,13 @@ public:
             }
             symbols.push_back(secondLeast);
         }
-        std::cout << "here";
 
         //放入sortedSymbols
         for(Symbol* i = symbols[0].symbol; i != nullptr; i = i->nextSymbol) {
             sortedSymbol.push_back(*i);
         }
-                std::cout << "here";
+
+        std::sort(sortedSymbol.begin(), sortedSymbol.end(), comp);
 
         //释放内存
         Symbol* temp = symbols[0].symbol;
@@ -178,14 +183,12 @@ public:
             delete temp;
             temp = t;
         }
-                std::cout << "here";
 
         //长度为n的code的个数
         //生成codeLengthCount for each codeLength;
         for (auto it = sortedSymbol.cbegin(); it != sortedSymbol.cend(); it++) {
             codeCountOfLength[it->codeLength]++;
         }
-        std::cout << "here";
 
         //规定codeLength不能大于16, 套用书上的方法实现了一下
         for(uint ii = 32; ii >= 17; ii--) {
@@ -201,7 +204,7 @@ public:
         }
 
 
-        uint index = 1; //
+        uint index = 1; //codeLength赋值回去
         for (auto it = sortedSymbol.begin(); it != sortedSymbol.end(); it++) {
             if(codeCountOfLength[index] != 0) {
                 it->codeLength = index;
@@ -218,6 +221,7 @@ public:
         for (auto it = sortedSymbol.cbegin(); it != sortedSymbol.cend(); it++) {
             if(currentLength == it->codeLength) {
                 codeOfSymbol[it->symbol] = huffmanCode++;
+                it->code = codeOfSymbol[it->symbol];
             } else {
                 currentLength++;
                 huffmanCode << 1;
