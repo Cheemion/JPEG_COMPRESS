@@ -38,6 +38,7 @@ int main() {
         std::cout << "Error - canot open file\n" ;
         return 1;
     }
+    
     JPG jpg(bmpReader.width, bmpReader.height, bmpReader.data, 2, 2, 1, 1, 1, 1) ;
     jpg.convertToYCbCr();
     jpg.subsampling();

@@ -3,6 +3,9 @@
 #include <cstring>
 #include <cmath>
 #include <vector>
+#include <fstream>
+
+
 
 const Block& JPG::getQuantizationTableByID(uint componentID) {
     if(componentID == 1)
@@ -279,10 +282,108 @@ void JPG::huffmanCoding() {
         }
     }
     chromaAC.generateHuffmanCode();
+}
 
+//start of image
+void writeSOI(std::iostream& outFile) {
+    outFile.put(0xFF);
+    outFile.put(SOI);
+}
+//end of image
+void writeEOI(std::iostream& outFile) {
+    outFile.put(0xFF);
+    outFile.put(EOI);;
+}
+//application-specific data
+void writeAPP(std::iostream& outFile) {
+    outFile.put(0xFF);
+    outFile.put(APP0); 
+    putShort(outFile, (2 + 3)); //长度2bytes +3字节的kim
+    outFile.put('K');
+    outFile.put('i');
+    outFile.put('m');
+}
+void writeSOF(std::iostream& outFile) {
+    outFile.put(0xFF);
+    outFile.put(SOF0); 
+}
+void writeDRI(std::iostream& outFile) {
+    outFile.put(0xFF);
+    outFile.put(DRI); 
+    putShort(outFile, 4);
+    putShort(outFile, 0);
+}
+
+void writeDQT(std::iostream& outFile, const JPG& jpg) {
+    
 }
 
 
-void JPG::output(std::string path) {
 
+void writeDHT(std::iostream& outFile, const JPG& jpg) {
+    outFile.put(0xFF);
+    outFile.put(DHT);
+    putShort(outFile, 2 + 4 * 17 + jpg.yAC.sortedSymbol.size() + jpg.yDC.sortedSymbol.size() + jpg.chromaAC.sortedSymbol.size() + jpg.chromaDC.sortedSymbol.size() - 4); //length
+    
+    const HuffmanTable& yDC = jpg.yDC;
+    outFile.put((JPG::DC_TABLE_ID << 4) + JPG::Y_ID); //4 high bits(0 means DC, 1 means AC), 4 low speificy ID, (0,1 means baseline frames)
+    for(uint i = 1; i <= 16; i++) {
+        outFile.put(yDC.codeCountOfLength[i]);
+    }
+    for(uint i = 0; i < yDC.sortedSymbol.size() - 1; i++) { //最后一个是dummy symbol
+        outFile.put(yDC.sortedSymbol[i].symbol);
+    }
+
+    const HuffmanTable& yAC = jpg.yAC;
+    outFile.put((JPG::AC_TABLE_ID << 4) + JPG::Y_ID); //4 high bits(0 means DC, 1 means AC), 4 low speificy ID, (0,1 means baseline frames)
+    for(uint i = 1; i <= 16; i++) {
+        outFile.put(yAC.codeCountOfLength[i]);
+    }
+    for(uint i = 0; i < yAC.sortedSymbol.size() - 1; i++) { //最后一个是dummy symbol
+        outFile.put(yAC.sortedSymbol[i].symbol);
+    }
+
+    const HuffmanTable& chromaDC = jpg.chromaDC;
+    outFile.put((JPG::DC_TABLE_ID << 4) + JPG::CHROMA_ID); //4 high bits(0 means DC, 1 means AC), 4 low speificy ID, (0,1 means baseline frames)
+    for(uint i = 1; i <= 16; i++) {
+        outFile.put(chromaDC.codeCountOfLength[i]);
+    }
+    for(uint i = 0; i < chromaDC.sortedSymbol.size() - 1; i++) { //最后一个是dummy symbol
+        outFile.put(chromaDC.sortedSymbol[i].symbol);
+    }
+
+    const HuffmanTable& chromaAC = jpg.chromaAC;
+    outFile.put((JPG::AC_TABLE_ID << 4) + JPG::CHROMA_ID); //4 high bits(0 means DC, 1 means AC), 4 low speificy ID, (0,1 means baseline frames)
+    for(uint i = 1; i <= 16; i++) {
+        outFile.put(chromaAC.codeCountOfLength[i]);
+    }
+    for(uint i = 0; i < chromaAC.sortedSymbol.size() - 1; i++) { //最后一个是dummy symbol
+        outFile.put(chromaAC.sortedSymbol[i].symbol);
+    }
+
+}
+
+void JPG::output(const std::string& path) {
+	std::fstream outFile(path, std::fstream::out | std::fstream::binary);
+    if(!outFile) {
+        std::cout << "Error - cannot open path";
+    }
+    //begin with an SOI marker
+    writeSOI(outFile);
+    //app
+    writeAPP(outFile);
+    //baseline mode 
+    writeSOF(outFile);
+    
+    writeDRI(outFile);
+
+    //write huffman table
+    writeDHT(outFile, *this);
+
+    //write quantization Table
+    writeDQT(outFile, *this);
+
+
+    writeEOI(outFile);
+     // a file must end with an EOI marker
 }

@@ -27,9 +27,6 @@ const byte SOF15 = 0xCF; // lossless
 //define huffman table
 const byte DHT = 0xC4;
 
-//reserved
-const byte JPG = 0xC8;
-
 //define arithmetic coding conditions
 const byte DAC = 0xCC;
 
@@ -341,9 +338,13 @@ public:
     void discreteCosineTransform();    
     void quantization();
     void huffmanCoding();
-    void output(std::string path);
+    void output(const std::string& path);
     
 public:
+    static const byte AC_TABLE_ID = 1;
+    static const byte DC_TABLE_ID = 0;
+    static const byte Y_ID = 0;
+    static const byte CHROMA_ID = 1;
     HuffmanTable yDC;
     HuffmanTable yAC;
     HuffmanTable chromaDC;
