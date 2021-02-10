@@ -501,7 +501,7 @@ public:
             blockNum = (YVerticalSamplingFrequency * YHorizontalSamplingFrequency + CbVerticalSamplingFrequency * CbHorizontalSamplingFrequency + CrHorizontalSamplingFrequency * CrVerticalSamplingFrequency);
            
             //分配内存空间
-            blocks = new Block[mcuHeight * mcuHeight * blockNum];
+            blocks = new Block[mcuWidth * mcuHeight * blockNum];
 
             //对应的内存
             for (uint i = 0; i < mcuHeight; i++) {

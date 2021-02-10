@@ -58,9 +58,7 @@ void JPG::subsampling() {
                                 if(sampledX >= width || sampledY >= height ) {
                                     currentBlock[y * 8 + x] = 0;
                                 } else {
-                                    uint k1 = y * 8 + x;
-                                    uint k2 = sampledY * width + sampledX;
-                                    currentBlock[k1] = BMPData[k2][componentID];
+                                    currentBlock[y * 8 + x] = BMPData[sampledY * width + sampledX][componentID];
                                 }
                             }
                         }
