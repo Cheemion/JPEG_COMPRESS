@@ -25,6 +25,48 @@ void printJPG(const JPG& jpg) {
             }
         }
     }
+    std::cout << "DC Tables 0 "<< "\n";
+    for(uint i = 1; i <= 16; i++) {
+        std::cout << "length:" << i << ":::";
+        for(auto it = jpg.yDC.sortedSymbol.cbegin(); it != jpg.yDC.sortedSymbol.cend(); it++) {
+            if(it->codeLength == i) {
+                std::cout << (uint)it->symbol << "  ";
+            }
+        }
+        std::cout << "\n";
+    }
+    std::cout << "DC Tables 1 "<< "\n";
+    for(uint i = 1; i <= 16; i++) {
+        std::cout << "length:" << i << ":::";
+        for(auto it = jpg.chromaDC.sortedSymbol.cbegin(); it != jpg.chromaDC.sortedSymbol.cend(); it++) {
+            if(it->codeLength == i) {
+                std::cout << (uint)it->symbol << "  ";
+            }
+        }
+        std::cout << "\n";
+
+    }
+    std::cout << "AC Tables 0 "<< "\n";
+    for(uint i = 1; i <= 16; i++) {
+        std::cout << "length:" << i << ":::";
+        for(auto it = jpg.yAC.sortedSymbol.cbegin(); it != jpg.yAC.sortedSymbol.cend(); it++) {
+            if(it->codeLength == i) {
+                std::cout << (uint)it->symbol << "  ";
+            }
+        }
+        std::cout << "\n";
+
+    }
+    std::cout << "AC Tables 1 "<< "\n";
+    for(uint i = 1; i <= 16; i++) {
+        std::cout << "length:" << i << ":::";
+        for(auto it = jpg.chromaAC.sortedSymbol.cbegin(); it != jpg.chromaAC.sortedSymbol.cend(); it++) {
+            if(it->codeLength == i) {
+                std::cout << (uint)it->symbol << "  ";
+            }
+        }
+        std::cout << "\n";
+    }
 }
 
 
