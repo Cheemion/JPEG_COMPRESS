@@ -237,16 +237,7 @@ public:
             linkedSymbol.weight = s->weight;
             symbols.push_back(linkedSymbol);
         }
-        /* 
-        
-        Symbol* dummySymbol = new Symbol(0xFF, 1, 0, nullptr); 
-        LinkedSymbol dymmyLinkedSymbol;
-        dymmyLinkedSymbol.symbol = dummySymbol;
-        dymmyLinkedSymbol.weight = dummySymbol->weight;
-        symbols.push_back(dymmyLinkedSymbol);
-        
-         */
-        
+
 
         //合并的过程
         while(symbols.size() != 1) {
@@ -277,8 +268,14 @@ public:
         }
 
         //排序,并且把dummy symbol 放在最后面;
-        std::sort(sortedSymbol.begin(), sortedSymbol.end(), comp);
-
+        std::sort(sortedSymbol.begin(), sortedSymbol.end(),  [](const Symbol& a, const Symbol& b) {
+			if (b.symbol == 0xFF)
+				return true;
+			if (a.symbol == 0xFF) 
+				return false;	
+			return a.codeLength < b.codeLength;
+		});
+        
         //释放内存
         Symbol* temp = symbols[0].symbol;
         while(temp != nullptr) {
@@ -315,32 +312,23 @@ public:
                 symbolIterator++;
             }
         }
-        /* 
-        uint index = 1; //codeLength赋值回去
-        for (auto it = sortedSymbol.begin(); it != sortedSymbol.end(); it++) {
-            if(codeCountOfLength[index] != 0) {
-                it->codeLength = index;
-                codeCountOfLength[index]--;
-            } else {
-                index++;
-                it--;
-            }
-        }
-         */
+
         //生成huffmanCode for each symbol
         uint huffmanCode = 0;
         uint currentLength = 1;
-        for (auto it = sortedSymbol.begin(); it != sortedSymbol.end(); it++) {
-            if(currentLength == it->codeLength) {
-                it->code = huffmanCode++;
-                codeOfSymbol[it->symbol] = it->code;
-                codeLengthOfSymbol[it->symbol] = it->codeLength;
-            } else {
-                huffmanCode = huffmanCode << 1;
-                currentLength++;
-                it--;
-            }
-        }
+		for (int i = 0; i < sortedSymbol.size(); i++) {
+			auto& it = sortedSymbol[i];
+			if(currentLength == it.codeLength) {
+				it.code = huffmanCode++;
+				codeOfSymbol[it.symbol] = it.code;
+				codeLengthOfSymbol[it.symbol] = it.codeLength;
+			} else {
+				huffmanCode = huffmanCode << 1;
+				currentLength++;
+				i--;
+			}
+		}
+
 
         //删除dummy symbol
         countOfSymbol[0xFF]--;

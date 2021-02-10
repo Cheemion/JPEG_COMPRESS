@@ -18,7 +18,7 @@ void printJPG(const JPG& jpg) {
                             for(uint q = 0; q < 8; q++) {
                                 std::cout << block[k * 8 + q] << " ";
                             }
-                        std::cout << "\n";
+                            std::cout << "\n";
                         }
                     }
                 }
@@ -30,29 +30,26 @@ void printJPG(const JPG& jpg) {
 
 int main() {
 
-    std::cout << "start" << std::endl;
     std::string path(RESOURCE_PATH);
-    std::string inputFile = path + "cat.bmp";
+    std::string inputFile = path + "example.bmp";
     BMPReader bmpReader; 
     if(!bmpReader.open(inputFile)) {
         std::cout << "Error - canot open file\n" ;
         return 1;
     }
-    
+
     JPG jpg(bmpReader.width, bmpReader.height, bmpReader.rgbData, 2, 2, 1, 1, 1, 1) ;
     jpg.convertToYCbCr();
     jpg.subsampling();
-    /*
+    
     jpg.discreteCosineTransform();
     jpg.quantization();
     jpg.huffmanCoding();
 
     std::string outputFile = path + "example.jpg";
     jpg.output(outputFile);
-     */
-     
-    //printJPG(jpg);
-    std::cout << "end" << std::endl;
+
+    printJPG(jpg);
     return 0;
     
 }
