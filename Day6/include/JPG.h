@@ -346,8 +346,46 @@ public:
         countOfSymbol[0xFF]--;
         codeCountOfLength[sortedSymbol.rbegin()->codeLength]--;
         sortedSymbol.erase(sortedSymbol.end() - 1);
-        
+
     }
+};
+
+
+class ByteWriter {
+private:
+    std::iostream& output;
+    uint bitPosition = 0;
+    byte bitstring = 0;
+public:
+    ByteWriter(std::iostream& output): output(output) {}
+    //bit ordering
+    void writeBit(byte bit) {
+        bitstring = (bitstring << 1) + bit;
+        bitPosition++;
+        if(bitPosition == 8) {
+            output.put(bitstring);
+            bitPosition = 0;
+            bitstring = 0;
+        }
+    }
+
+    void writeBit(uint bytes, uint length) {
+        while(length > 0) {
+            writeBit((bytes >> (length - 1)) & 0x1);
+            length--;
+        }
+    }
+
+    //把后面没写的全部置1 写出去
+    void flush() {
+        if(bitPosition == 0) {
+            return;
+        } else {
+            writeBit(1);
+            flush();
+        }
+    }
+
 };
 
 class JPG {
@@ -368,6 +406,22 @@ public:
     HuffmanTable yAC;
     HuffmanTable chromaDC;
     HuffmanTable chromaAC;
+
+    const HuffmanTable& getHuffmanACTable(uint id) const {
+        if(id == 1) {
+            return yAC;
+        } else {
+            return chromaAC;
+        }    
+    }
+
+    const HuffmanTable& getHuffmanDCTable(uint id) const {
+        if(id == 1) {
+            return yDC;
+        } else {
+            return chromaDC;
+        }    
+    }
 
     MCU* data;
     Block* blocks;
@@ -449,7 +503,7 @@ public:
             //分配内存空间
             blocks = new Block[mcuHeight * mcuHeight * blockNum];
 
-            //把对于的内存
+            //对应的内存
             for (uint i = 0; i < mcuHeight; i++) {
                 for (uint j = 0; j < mcuWidth; j++) {
                     data[i * mcuWidth + j].y = &blocks[(i * mcuWidth + j) * blockNum];
@@ -469,9 +523,21 @@ public:
         }
 
     ~JPG() {
-        delete[] data;
-        delete[] blocks;
-        delete[] BMPData;
+        if(data) {
+            delete[] data;
+            data = nullptr;
+            std::cout << "Delete JPG::Data" << std::endl;
+        }
+        if(blocks) {
+            delete[] blocks;
+            blocks = nullptr;
+            std::cout << "Delete JPG:blocks" << std::endl;
+        }
+        if(BMPData) {
+            delete[] BMPData;
+            BMPData = nullptr;
+            std::cout << "Delete JPG:BMPData" << std::endl;
+        }
     }
 
 };

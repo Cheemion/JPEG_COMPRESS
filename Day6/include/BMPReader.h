@@ -2,21 +2,7 @@
 #include "common.h"
 #include <string>
 
-class BMPReader {
-public:
-	BMPReader() = default;
-	~BMPReader() {
-		if (data) {
-			delete[] data; 
-		}
-	}
-	bool open(std::string& path);
-public:
-	uint height = 0;
-	uint width = 0;
-	uint paddingBytes = 0;
-	RGB* data = nullptr;
-};
+
 
 //2个字节对齐
 #pragma pack(2)
@@ -51,3 +37,20 @@ typedef struct {
 } BitMapCoreHeader;
 #pragma pack()
 
+class BMPReader {
+public:
+	BMPReader() = default;
+	~BMPReader() {
+		if (rgbData) {
+			delete[] rgbData; 
+			rgbData = nullptr;
+			std::cout << "Delete BMPReader::rgbData" << std::endl;
+		}
+	}
+	bool open(std::string& path);
+public:
+	uint height = 0;
+	uint width = 0;
+	uint paddingBytes = 0;
+	RGB* rgbData = nullptr;
+};

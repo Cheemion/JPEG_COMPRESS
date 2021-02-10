@@ -59,18 +59,14 @@ bool BMPReader::open(std::string& path) {
 	// if width = 4, paddingSize = 0
 	this->paddingBytes = width % 4;
 
-	data = new (std::nothrow) RGB[this->width * this->height];
-	if (!data) {
-		printf("Error - error when allocating memroy for RGB");
-		return false;
-	}
+	rgbData = new RGB[this->width * this->height];
 	//跳到data数据的位置
 	fseek(file, fileHeader.bfOffBits, SEEK_SET);
 	for (uint i = 0; i < height; i++) {
 		//read data
-		if (width != fread(data + (height - 1 - i) * width , sizeof(RGB), width, file)) {
+		if (width != fread(rgbData + (height - 1 - i) * width , sizeof(RGB), width, file)) {
 			printf("Error - something wrong when reading data from BMP file");
-			delete data;
+			delete[] rgbData;
 			return false;
 		}
 		fseek(file, paddingBytes, SEEK_CUR);

@@ -55,10 +55,12 @@ void JPG::subsampling() {
                                 uint sampledY = yOffSet + y *  maxVerticalSamplingFrequency / getVerticalSamplingFrequency(componentID);
                                 uint sampledX = xOffset + x * maxHorizontalSamplingFrequency / getHorizontalSamplingFrequency(componentID);
                                 //cannot find in original pictures;
-                                if(sampledX >= width || sampledY >= height) {
+                                if(sampledX >= width || sampledY >= height ) {
                                     currentBlock[y * 8 + x] = 0;
                                 } else {
-                                    currentBlock[y * 8 + x] = BMPData[sampledY * width + sampledX][componentID];
+                                    uint k1 = y * 8 + x;
+                                    uint k2 = sampledY * width + sampledX;
+                                    currentBlock[k1] = BMPData[k2][componentID];
                                 }
                             }
                         }
@@ -358,6 +360,72 @@ void writeDQT(std::iostream& outFile, const JPG& jpg) {
 
 }
 
+uint getRawBit(int value, uint length) {
+    uint rawBit;
+    if(value > 0) {
+        rawBit = value - (1 << (length - 1));
+    } else {
+        rawBit = static_cast<uint>(-value);
+    }
+    return rawBit;
+}
+
+void writeCompressData(std::iostream& outFile, const JPG& jpg) {
+    ByteWriter writer(outFile);
+    int lastDC[4] = { 0 };
+    for (uint i = 0; i < jpg.mcuHeight; i++) {
+        for (uint j = 0; j < jpg.mcuWidth; j++) {
+            MCU& currentMCU = jpg.data[i * jpg.mcuWidth + j];
+            //iterate over 每一个component Y, cb cr
+            for(uint componentID = 1; componentID <= 3; componentID++) {
+                for(uint ii = 0; ii < jpg.getVerticalSamplingFrequency(componentID); ii++) {
+                    for(uint jj = 0; jj < jpg.getHorizontalSamplingFrequency(componentID); jj++) {
+                        Block& currentBlock = currentMCU[componentID][ii * jpg.getHorizontalSamplingFrequency(componentID) + jj];
+                        std::cout << "Writing DC for component ID:" << componentID << std::endl;
+                        byte symbol;
+                        //先写DC分量
+                        const HuffmanTable& dcTable = jpg.getHuffmanDCTable(componentID);
+                        int difference = currentBlock[0] - lastDC[componentID]; //DC分量是encode difference
+                        lastDC[componentID] = currentBlock[0];
+                        symbol = getBinaryLengthByValue(difference); //Y的2进制的长度就是symbol的值
+                        writer.writeBit(dcTable.codeOfSymbol[symbol], dcTable.codeLengthOfSymbol[symbol]);
+                        //写AC分量
+                        std::cout << "Writing AC for component ID:" << componentID << std::endl;
+                        const HuffmanTable& acTable = jpg.getHuffmanDCTable(componentID);
+                        uint numZero = 0;
+                        for(uint k = 1; k < 64; k++) {
+                            if(currentBlock[ZIG_ZAG[k]] == 0) {
+                                numZero++;
+                                if(numZero == 16) {
+                                    if(isRemainingAllZero(currentBlock, k + 1)) {
+                                        symbol = 0x00;
+                                        writer.writeBit(acTable.codeOfSymbol[symbol], acTable.codeLengthOfSymbol[symbol]);
+                                        break;
+                                    } else {
+                                        symbol = 0xF0;
+                                        writer.writeBit(acTable.codeOfSymbol[symbol], acTable.codeLengthOfSymbol[symbol]);
+                                        numZero = 0;
+                                    }
+                                }
+                            } else {
+                                
+                                byte lengthOfCoefficient = getBinaryLengthByValue(currentBlock[ZIG_ZAG[k]]);
+                                symbol = (numZero << 4) + lengthOfCoefficient;
+                                writer.writeBit(acTable.codeOfSymbol[symbol], acTable.codeLengthOfSymbol[symbol]);
+                                uint rowBit = getRawBit(currentBlock[ZIG_ZAG[k]], lengthOfCoefficient);
+                                //write raw bits;
+                                writer.writeBit(rowBit, lengthOfCoefficient);
+                                numZero = 0;
+                            }
+                        }
+                        
+                    }
+                }
+            }
+        }
+    }
+    writer.flush();
+}
 
 
 void writeDHT(std::iostream& outFile, const JPG& jpg) {
@@ -412,6 +480,7 @@ void JPG::output(const std::string& path) {
 	std::fstream outFile(path, std::fstream::out | std::fstream::binary);
     if(!outFile) {
         std::cout << "Error - cannot open path";
+        return;
     }
     //begin with an SOI marker
     writeSOI(outFile);
@@ -419,17 +488,18 @@ void JPG::output(const std::string& path) {
     writeAPP(outFile);
     //baseline mode 
     writeSOF(outFile, *this);
-    
-    writeDRI(outFile);
-
-    //write huffman table
-    writeDHT(outFile, *this);
 
     //write quantization Table
     writeDQT(outFile, *this);
+    
+    writeDRI(outFile);
+    //write huffman table
+    writeDHT(outFile, *this);
 
     writeSOS(outFile, *this);
+    writeCompressData(outFile, *this); // compressedData immediately follows the marker
 
     writeEOI(outFile);
      // a file must end with an EOI marker
+    outFile.close();
 }
