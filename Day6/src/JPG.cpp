@@ -298,39 +298,84 @@ void writeEOI(std::iostream& outFile) {
 void writeAPP(std::iostream& outFile) {
     outFile.put(0xFF);
     outFile.put(APP0); 
-    putShort(outFile, (2 + 3)); //长度2bytes +3字节的kim
+    putShortBigEndian(outFile, (2 + 3)); //长度2bytes +3字节的kim
     outFile.put('K');
     outFile.put('i');
     outFile.put('m');
 }
-void writeSOF(std::iostream& outFile) {
+void writeSOF(std::iostream& outFile, const JPG& jpg) {
     outFile.put(0xFF);
     outFile.put(SOF0); 
+    putShortBigEndian(outFile, 2 + 1 + 2 + 2 + 1 + 3 * 3);
+    outFile.put(8); //precision
+    putShortBigEndian(outFile, jpg.height);
+    putShortBigEndian(outFile, jpg.width);
+    outFile.put(3); //number of compoenets
+
+    for(uint i = 1; i <= 3; i++) {
+        outFile.put(i);
+        outFile.put((jpg.getHorizontalSamplingFrequency(i) << 4) + jpg.getVerticalSamplingFrequency(i)); // 4 high means horizontal sampling, 4 low means vertical sampling
+        if(i == 1) 
+            outFile.put(JPG::Y_ID);
+        else
+            outFile.put(JPG::CHROMA_ID);
+    }
 }
 void writeDRI(std::iostream& outFile) {
     outFile.put(0xFF);
     outFile.put(DRI); 
-    putShort(outFile, 4);
-    putShort(outFile, 0);
+    putShortBigEndian(outFile, 2 + 2);
+    putShortBigEndian(outFile, 0);
 }
 
+void writeSOS(std::iostream& outFile, const JPG& jpg) {
+    outFile.put(0xFF);
+    outFile.put(SOS); 
+    putShortBigEndian(outFile, 2 + 1 + 2 * 3 + 1 + 1 + 1);
+    outFile.put(3);//component count
+    putShortBigEndian(outFile, (1 << 8) + ((JPG::Y_ID << 4) + JPG::Y_ID));
+    putShortBigEndian(outFile, (2 << 8) + ((JPG::CHROMA_ID << 4) + JPG::CHROMA_ID));
+    putShortBigEndian(outFile, (3 << 8) + ((JPG::CHROMA_ID << 4) + JPG::CHROMA_ID));
+    outFile.put(0); //spectral selection start
+    outFile.put(63); //spectral selection end
+    outFile.put(0); //successive approximation
+
+}
 void writeDQT(std::iostream& outFile, const JPG& jpg) {
-    
+    outFile.put(0xFF);
+    outFile.put(DQT); 
+    putShortBigEndian(outFile, 2 + 2 * 65);
+
+    outFile.put((0 << 4) + JPG::Y_ID);// 4 low bits are table identifier, 4 high specify the quantization value
+    for(uint i = 0; i < 64; i++) { //zigzag order
+        outFile.put(QUANTIZATION_TABLE_Y[ZIG_ZAG[i]]);
+    }
+
+    outFile.put((0 << 4) + JPG::CHROMA_ID);// 4 low bits are table identifier, 4 high specify the quantization value 0 = 1 byte
+    for(uint i = 0; i < 64; i++) { //zigzag order
+        outFile.put(QUANTIZATION_TABLE_CBCR[ZIG_ZAG[i]]);
+    }
+
 }
 
 
 
 void writeDHT(std::iostream& outFile, const JPG& jpg) {
+    std::cout << "write DHT\n";
+
     outFile.put(0xFF);
     outFile.put(DHT);
-    putShort(outFile, 2 + 4 * 17 + jpg.yAC.sortedSymbol.size() + jpg.yDC.sortedSymbol.size() + jpg.chromaAC.sortedSymbol.size() + jpg.chromaDC.sortedSymbol.size() - 4); //length
-    
+    uint length = 2 + 4 * 17 + jpg.yAC.sortedSymbol.size() + jpg.yDC.sortedSymbol.size() + jpg.chromaAC.sortedSymbol.size() + jpg.chromaDC.sortedSymbol.size();
+    putShortBigEndian(outFile, length); //length
+    std::cout << "DHT Length:" << length << "\n";
+
     const HuffmanTable& yDC = jpg.yDC;
     outFile.put((JPG::DC_TABLE_ID << 4) + JPG::Y_ID); //4 high bits(0 means DC, 1 means AC), 4 low speificy ID, (0,1 means baseline frames)
     for(uint i = 1; i <= 16; i++) {
         outFile.put(yDC.codeCountOfLength[i]);
     }
-    for(uint i = 0; i < yDC.sortedSymbol.size() - 1; i++) { //最后一个是dummy symbol
+
+    for(uint i = 0; i < yDC.sortedSymbol.size(); i++) { 
         outFile.put(yDC.sortedSymbol[i].symbol);
     }
 
@@ -339,7 +384,7 @@ void writeDHT(std::iostream& outFile, const JPG& jpg) {
     for(uint i = 1; i <= 16; i++) {
         outFile.put(yAC.codeCountOfLength[i]);
     }
-    for(uint i = 0; i < yAC.sortedSymbol.size() - 1; i++) { //最后一个是dummy symbol
+    for(uint i = 0; i < yAC.sortedSymbol.size(); i++) { //最后一个是dummy symbol
         outFile.put(yAC.sortedSymbol[i].symbol);
     }
 
@@ -348,7 +393,7 @@ void writeDHT(std::iostream& outFile, const JPG& jpg) {
     for(uint i = 1; i <= 16; i++) {
         outFile.put(chromaDC.codeCountOfLength[i]);
     }
-    for(uint i = 0; i < chromaDC.sortedSymbol.size() - 1; i++) { //最后一个是dummy symbol
+    for(uint i = 0; i < chromaDC.sortedSymbol.size(); i++) { //最后一个是dummy symbol
         outFile.put(chromaDC.sortedSymbol[i].symbol);
     }
 
@@ -357,7 +402,7 @@ void writeDHT(std::iostream& outFile, const JPG& jpg) {
     for(uint i = 1; i <= 16; i++) {
         outFile.put(chromaAC.codeCountOfLength[i]);
     }
-    for(uint i = 0; i < chromaAC.sortedSymbol.size() - 1; i++) { //最后一个是dummy symbol
+    for(uint i = 0; i < chromaAC.sortedSymbol.size(); i++) { //最后一个是dummy symbol
         outFile.put(chromaAC.sortedSymbol[i].symbol);
     }
 
@@ -373,7 +418,7 @@ void JPG::output(const std::string& path) {
     //app
     writeAPP(outFile);
     //baseline mode 
-    writeSOF(outFile);
+    writeSOF(outFile, *this);
     
     writeDRI(outFile);
 
@@ -383,6 +428,7 @@ void JPG::output(const std::string& path) {
     //write quantization Table
     writeDQT(outFile, *this);
 
+    writeSOS(outFile, *this);
 
     writeEOI(outFile);
      // a file must end with an EOI marker

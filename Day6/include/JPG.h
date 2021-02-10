@@ -223,6 +223,10 @@ public:
     }
     void generateHuffmanCode() {
         std::vector<LinkedSymbol> symbols;
+
+        // FF是一个不会出现的symbol,作为我们的dummy symbol 防止one bit stream 的出现  比如11111, 这样就可以防止compressdata中出现FF的可能
+        countOfSymbol[255]++;//加入dummy symbol
+
         //遍历每个出现的symbol， add to vectors
         for(uint symbol = 0; symbol < 256; symbol++) {
             if(countOfSymbol[symbol] == 0) 
@@ -233,15 +237,15 @@ public:
             linkedSymbol.weight = s->weight;
             symbols.push_back(linkedSymbol);
         }
+        /* 
         
-        
-        // FF是一个不会出现的symbol,作为我们的dummy symbol 防止one bit stream 的出现  比如11111, 这样就可以防止compressdata中出现FF的可能
         Symbol* dummySymbol = new Symbol(0xFF, 1, 0, nullptr); 
         LinkedSymbol dymmyLinkedSymbol;
         dymmyLinkedSymbol.symbol = dummySymbol;
         dymmyLinkedSymbol.weight = dummySymbol->weight;
         symbols.push_back(dymmyLinkedSymbol);
         
+         */
         
 
         //合并的过程
@@ -302,6 +306,16 @@ public:
             }
         }
 
+        auto symbolIterator = sortedSymbol.begin();
+        for(uint length = 1; length <= 16; length++) {
+            uint count = codeCountOfLength[length];
+            while(count > 0) {
+                symbolIterator->codeLength = length;
+                count--;
+                symbolIterator++;
+            }
+        }
+        /* 
         uint index = 1; //codeLength赋值回去
         for (auto it = sortedSymbol.begin(); it != sortedSymbol.end(); it++) {
             if(codeCountOfLength[index] != 0) {
@@ -312,8 +326,7 @@ public:
                 it--;
             }
         }
-
-        
+         */
         //生成huffmanCode for each symbol
         uint huffmanCode = 0;
         uint currentLength = 1;
@@ -328,6 +341,12 @@ public:
                 it--;
             }
         }
+
+        //删除dummy symbol
+        countOfSymbol[0xFF]--;
+        codeCountOfLength[sortedSymbol.rbegin()->codeLength]--;
+        sortedSymbol.erase(sortedSymbol.end() - 1);
+        
     }
 };
 

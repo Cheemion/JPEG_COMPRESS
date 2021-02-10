@@ -32,9 +32,9 @@ int main() {
 
     std::cout << "start" << std::endl;
     std::string path(RESOURCE_PATH);
-    path = path + "example.bmp";
+    std::string inputFile = path + "example.bmp";
     BMPReader bmpReader; 
-    if(!bmpReader.open(path)) {
+    if(!bmpReader.open(inputFile)) {
         std::cout << "Error - canot open file\n" ;
         return 1;
     }
@@ -45,9 +45,9 @@ int main() {
     jpg.discreteCosineTransform();
     jpg.quantization();
     jpg.huffmanCoding();
-    
-    std::string jpgPath(path + "example.jpg");
-    jpg.output(jpgPath);
+
+    std::string outputFile = path + "example.jpg";
+    jpg.output(outputFile);
     printJPG(jpg);
     std::cout << "end" << std::endl;
     return 0;
