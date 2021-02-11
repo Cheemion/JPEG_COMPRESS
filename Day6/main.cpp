@@ -70,8 +70,9 @@ void printJPG(const JPG& jpg) {
 }
 
 
-int main() {
 
+int main() {
+    std::cout << "start" << std::endl;
     std::string path(RESOURCE_PATH);
     std::string inputFile = path + "example.bmp";
     BMPReader bmpReader; 
@@ -92,6 +93,6 @@ int main() {
     jpg.output(outputFile);
 
     printJPG(jpg);
+    std::cout << "end" << std::endl;
     return 0;
-    
 }

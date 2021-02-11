@@ -340,10 +340,12 @@ public:
 
 
 class ByteWriter {
-private:
+public:
     std::iostream& output;
     uint bitPosition = 0;
     byte bitstring = 0;
+    std::vector<byte> bytes;
+    uint bytesWritten = 0;
 public:
     ByteWriter(std::iostream& output): output(output) {}
     //bit ordering
@@ -351,9 +353,14 @@ public:
         bitstring = (bitstring << 1) + bit;
         bitPosition++;
         if(bitPosition == 8) {
+            bytes.push_back(bitstring);
             output.put(bitstring);
+            if(bitstring == 0xFF) {
+                output.put(0x00);// it will rarely produce the compressed value FF16. When this value is required in the compressed data, it is encoded as the 2-byte sequence FF16 followed by 0016
+            }
             bitPosition = 0;
             bitstring = 0;
+            bytesWritten++;
         }
     }
 
@@ -369,7 +376,7 @@ public:
         if(bitPosition == 0) {
             return;
         } else {
-            writeBit(1);
+            writeBit(0);
             flush();
         }
     }

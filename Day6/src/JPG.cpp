@@ -378,21 +378,30 @@ void writeCompressData(std::iostream& outFile, const JPG& jpg) {
             for(uint componentID = 1; componentID <= 3; componentID++) {
                 for(uint ii = 0; ii < jpg.getVerticalSamplingFrequency(componentID); ii++) {
                     for(uint jj = 0; jj < jpg.getHorizontalSamplingFrequency(componentID); jj++) {
+
                         Block& currentBlock = currentMCU[componentID][ii * jpg.getHorizontalSamplingFrequency(componentID) + jj];
-                        std::cout << "Writing DC for component ID:" << componentID << std::endl;
                         byte symbol;
                         //先写DC分量
                         const HuffmanTable& dcTable = jpg.getHuffmanDCTable(componentID);
                         int difference = currentBlock[0] - lastDC[componentID]; //DC分量是encode difference
                         lastDC[componentID] = currentBlock[0];
-                        symbol = getBinaryLengthByValue(difference); //Y的2进制的长度就是symbol的值
+
+                        //对于DC来说symbol 就是length
+                        symbol = getBinaryLengthByValue(difference); //Y的2进制的长度就是symbol的值// 
+                        uint magnitude = symbol;
                         writer.writeBit(dcTable.codeOfSymbol[symbol], dcTable.codeLengthOfSymbol[symbol]);
+                        if(magnitude != 0) { //长度不为0的话，需要把row bit 写进去
+                            uint rowBit = getRawBit(difference, symbol);
+                            writer.writeBit(difference, symbol);
+                        }
+                        
+                        //write raw bits;
                         //写AC分量
-                        std::cout << "Writing AC for component ID:" << componentID << std::endl;
-                        const HuffmanTable& acTable = jpg.getHuffmanDCTable(componentID);
+                        const HuffmanTable& acTable = jpg.getHuffmanACTable(componentID);
                         uint numZero = 0;
                         for(uint k = 1; k < 64; k++) {
-                            if(currentBlock[ZIG_ZAG[k]] == 0) {
+                            int currentValue = currentBlock[ZIG_ZAG[k]];
+                            if(currentValue == 0) {
                                 numZero++;
                                 if(numZero == 16) {
                                     if(isRemainingAllZero(currentBlock, k + 1)) {
@@ -406,23 +415,26 @@ void writeCompressData(std::iostream& outFile, const JPG& jpg) {
                                     }
                                 }
                             } else {
-                                
-                                byte lengthOfCoefficient = getBinaryLengthByValue(currentBlock[ZIG_ZAG[k]]);
+                                byte lengthOfCoefficient = getBinaryLengthByValue(currentValue);
                                 symbol = (numZero << 4) + lengthOfCoefficient;
+                                if(acTable.codeLengthOfSymbol[symbol] == 0) {
+                                    throw std::runtime_error("Error -find error");
+                                }
                                 writer.writeBit(acTable.codeOfSymbol[symbol], acTable.codeLengthOfSymbol[symbol]);
-                                uint rowBit = getRawBit(currentBlock[ZIG_ZAG[k]], lengthOfCoefficient);
+                                uint rowBit = getRawBit(currentValue, lengthOfCoefficient);
                                 //write raw bits;
                                 writer.writeBit(rowBit, lengthOfCoefficient);
                                 numZero = 0;
                             }
                         }
-                        
+
                     }
                 }
             }
         }
     }
     writer.flush();
+    std::cout <<writer.bytesWritten << " bytes written to the compressed data"<< std::endl;
 }
 
 
