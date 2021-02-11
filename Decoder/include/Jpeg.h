@@ -1,6 +1,8 @@
 #pragma once
 #include <vector>
-
+#ifndef M_PI
+	#define M_PI 3.14159265358979323846
+#endif // !M_PI
 typedef unsigned char byte;
 typedef unsigned int uint;
 
