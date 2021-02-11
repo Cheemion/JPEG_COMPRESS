@@ -74,7 +74,7 @@ void printJPG(const JPG& jpg) {
 int main() {
     std::cout << "start" << std::endl;
     std::string path(RESOURCE_PATH);
-    std::string inputFile = path + "example.bmp";
+    std::string inputFile = path + "lina.bmp";
     BMPReader bmpReader; 
     if(!bmpReader.open(inputFile)) {
         std::cout << "Error - canot open file\n" ;

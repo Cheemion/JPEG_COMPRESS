@@ -359,13 +359,16 @@ void writeDQT(std::iostream& outFile, const JPG& jpg) {
 }
 
 uint getRawBit(int value, uint length) {
-    uint rawBit;
-    if(value > 0) {
-        rawBit = value - (1 << (length - 1));
-    } else {
-        rawBit = static_cast<uint>(-value);
-    }
-    return rawBit;
+	if (length == 0)
+		throw std::runtime_error("Error - Length 0 is not allowed");
+	uint rawBit;
+	if (value > 0) {
+		rawBit = value;
+	} else {
+		rawBit = (-value);
+		rawBit = ~rawBit;
+	}
+	return rawBit;
 }
 
 void writeCompressData(std::iostream& outFile, const JPG& jpg) {
@@ -402,6 +405,11 @@ void writeCompressData(std::iostream& outFile, const JPG& jpg) {
                         for(uint k = 1; k < 64; k++) {
                             int currentValue = currentBlock[ZIG_ZAG[k]];
                             if(currentValue == 0) {
+                                if(k == 63) {
+                                    symbol = 0x00;
+                                    writer.writeBit(acTable.codeOfSymbol[symbol], acTable.codeLengthOfSymbol[symbol]);
+                                    break;
+                                }
                                 numZero++;
                                 if(numZero == 16) {
                                     if(isRemainingAllZero(currentBlock, k + 1)) {
@@ -427,7 +435,6 @@ void writeCompressData(std::iostream& outFile, const JPG& jpg) {
                                 numZero = 0;
                             }
                         }
-
                     }
                 }
             }
@@ -451,7 +458,7 @@ void writeDHT(std::iostream& outFile, const JPG& jpg) {
     outFile.put((JPG::DC_TABLE_ID << 4) + JPG::Y_ID); //4 high bits(0 means DC, 1 means AC), 4 low speificy ID, (0,1 means baseline frames)
     for(uint i = 1; i <= 16; i++) {
         outFile.put(yDC.codeCountOfLength[i]);
-    }
+    } 
 
     for(uint i = 0; i < yDC.sortedSymbol.size(); i++) { 
         outFile.put(yDC.sortedSymbol[i].symbol);
@@ -507,7 +514,7 @@ void JPG::output(const std::string& path) {
     writeDHT(outFile, *this);
 
     writeSOS(outFile, *this);
-    writeCompressData(outFile, *this); // compressedData immediately follows the marker
+    writeCompressData(outFile, *this); // compressedData immediately follows the marker SOS
 
     writeEOI(outFile);
      // a file must end with an EOI marker
