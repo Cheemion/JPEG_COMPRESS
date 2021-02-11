@@ -55,7 +55,6 @@ void printJPG(const JPG& jpg) {
             }
         }
         std::cout << "\n";
-
     }
     std::cout << "AC Tables 1 "<< "\n";
     for(uint i = 1; i <= 16; i++) {
@@ -74,7 +73,7 @@ void printJPG(const JPG& jpg) {
 int main() {
     std::cout << "start" << std::endl;
     std::string path(RESOURCE_PATH);
-    std::string inputFile = path + "lina.bmp";
+    std::string inputFile = path + "example.bmp";
     BMPReader bmpReader; 
     if(!bmpReader.open(inputFile)) {
         std::cout << "Error - canot open file\n" ;

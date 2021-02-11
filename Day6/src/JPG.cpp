@@ -365,8 +365,13 @@ uint getRawBit(int value, uint length) {
 	if (value > 0) {
 		rawBit = value;
 	} else {
+        uint temp = 1;
+        while(length > 1) {
+            temp = (temp << 1) + 1;
+            length--;
+        }
 		rawBit = (-value);
-		rawBit = ~rawBit;
+		rawBit = (~rawBit) & temp;
 	}
 	return rawBit;
 }
@@ -383,6 +388,16 @@ void writeCompressData(std::iostream& outFile, const JPG& jpg) {
                     for(uint jj = 0; jj < jpg.getHorizontalSamplingFrequency(componentID); jj++) {
 
                         Block& currentBlock = currentMCU[componentID][ii * jpg.getHorizontalSamplingFrequency(componentID) + jj];
+                        std::cout << "Block\n";
+                        for(uint k = 0; k < 8; k++) {
+                            for(uint q = 0; q < 8; q++) {
+                                if(currentBlock[k * 8 + q] >= 0)
+                                    std::cout << " ";
+                                std::cout << currentBlock[k * 8 + q] << " ";
+                            }
+                            std::cout << "\n";
+                        }
+                        
                         byte symbol;
                         //先写DC分量
                         const HuffmanTable& dcTable = jpg.getHuffmanDCTable(componentID);
@@ -395,7 +410,7 @@ void writeCompressData(std::iostream& outFile, const JPG& jpg) {
                         writer.writeBit(dcTable.codeOfSymbol[symbol], dcTable.codeLengthOfSymbol[symbol]);
                         if(magnitude != 0) { //长度不为0的话，需要把row bit 写进去
                             uint rowBit = getRawBit(difference, symbol);
-                            writer.writeBit(difference, symbol);
+                            writer.writeBit(rowBit, magnitude);
                         }
                         
                         //write raw bits;
@@ -435,6 +450,7 @@ void writeCompressData(std::iostream& outFile, const JPG& jpg) {
                                 numZero = 0;
                             }
                         }
+
                     }
                 }
             }
