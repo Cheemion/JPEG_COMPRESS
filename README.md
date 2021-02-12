@@ -1,12 +1,18 @@
 # JPEG_COMPRESS  
-
-手写jpg压缩和解压，理解JPEG的压缩原理.  
+手写jpg压缩和解压，理解JPEG的压缩原理. 
+JPEG压缩分为4部分  
+1.下采样 2.量化 3.离散余弦变化 4.哈夫曼压缩。分别对于Day2, Day3, Day4, Day5  
+Day1是读取需要压缩的图片, Day6是输出jpeg文件.  
 
 A one step by step project that teaches people how JPEG works.    
-Day1, reading pixels data from BMP files. 第一天，从bmp文件中读取像素.    
-Day2, subsampling pixels. 第二天，对原来bmp文件中的像素下采样.  
-Day3, 离散傅里叶变化DCT discrete cosine transform.    
-Day4, quantization, 量化.  
-Day5, huffman entropy compress. 哈夫曼压缩.  
+Day1, reading pixels data from BMP files. 
+Day2, subsampling pixels. 
+Day3, DCT discrete cosine transform.    
+Day4, quantization 
+Day5, huffman entropy compress.
 Day6, outpuf jpg file.
 
+完结于2021.2.13
+all done in Feb 13,2021  
+
+Thanks for reading.
