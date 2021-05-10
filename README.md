@@ -16,3 +16,6 @@ Day6, outpuf jpg file.
 all done in Feb 13,2021  
 
 Thanks for reading.
+
+对应的JEPG的解释.
+https://www.cnblogs.com/robsann/p/14397929.html
